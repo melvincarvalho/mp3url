@@ -1,0 +1,4 @@
+#EXTM3U
+#EXTINF:240,Test Track
+#EXTVLCOPT:start-time=30
+https://example.com/track.mp3https://example.com/track.mp3

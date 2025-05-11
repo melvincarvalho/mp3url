@@ -1,5 +1,3 @@
 #EXTM3U
-#EXTINF:120,Test CLI Song
-https://example.com/test-song.mp3
-#EXTINF:150,Another Test Song
-https://example.com/another-test-song.mp3
+#EXTINF:135,Test Song
+https://example.com/song.mp3

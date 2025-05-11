@@ -1,6 +1,6 @@
 {
   "name": "mp3url",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "m3u library for parsing and serializing M3U playlist files",
   "type": "module",
   "main": "index.js",

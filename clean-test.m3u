@@ -1,0 +1,7 @@
+#EXTM3U
+#EXTINF:180,Clean Test
+#EXTVLCOPT:start-time=40
+https://example.com/track.mp3
+#EXTINF:200,Second Track
+#EXTVLCOPT:start-time=50
+https://example.com/track2.mp3

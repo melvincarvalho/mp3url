@@ -20,6 +20,7 @@ Usage:
   mp3url create <output.m3u>                Create empty M3U file
   mp3url add <playlist.m3u> <url> [title] [duration]  Add track to playlist
   mp3url swap <playlist.m3u> <index1> <index2>        Swap tracks in playlist
+  mp3url addtime <playlist.m3u> <seconds> [index]     Add seconds to track start time
   mp3url help                               Show this help
 
 Examples:
@@ -27,6 +28,7 @@ Examples:
   mp3url serialize playlist.json playlist.m3u
   mp3url add playlist.m3u https://example.com/song.mp3 "My Song" 180
   mp3url swap playlist.m3u 0 3
+  mp3url addtime playlist.m3u 15 0
 `;
 
 async function main () {
@@ -175,6 +177,62 @@ async function main () {
         await writeFile(playlistFile, m3uContent);
 
         console.log(`Swapped tracks at positions ${index1} and ${index2} in ${playlistFile}`);
+        break;
+      }
+
+      case 'addtime': {
+        const playlistFile = args[1];
+        const secondsToAdd = parseFloat(args[2]);
+        // Default track index to 0 if not provided
+        const trackIndex = args[3] ? parseInt(args[3]) : 0;
+
+        if (!playlistFile || isNaN(secondsToAdd)) {
+          console.error('Error: Playlist file and seconds to add required');
+          console.log(usage);
+          process.exit(1);
+        }
+
+        // Read the playlist
+        let playlist;
+        try {
+          const content = await readFile(playlistFile, 'utf8');
+          playlist = parse(content);
+        } catch (err) {
+          console.error(`Error reading playlist file: ${err.message}`);
+          process.exit(1);
+        }
+
+        // Validate the index
+        if (trackIndex < 0 || trackIndex >= playlist.tracks.length) {
+          console.error(`Error: Track index must be between 0 and ${playlist.tracks.length - 1}`);
+          process.exit(1);
+        }
+
+        // Add start time to the track
+        const track = playlist.tracks[trackIndex];
+
+        // Check if there's a start-time directive already
+        let startTimeDirective = track.directives.find(d =>
+          d.type === 'EXTVLCOPT' && d.key === 'start-time');
+
+        if (startTimeDirective) {
+          // Add seconds to existing start time
+          let currentStartTime = parseFloat(startTimeDirective.value);
+          startTimeDirective.value = (currentStartTime + secondsToAdd).toString();
+        } else {
+          // Create a new start-time directive
+          track.directives.push({
+            type: 'EXTVLCOPT',
+            key: 'start-time',
+            value: secondsToAdd.toString()
+          });
+        }
+
+        // Save the playlist
+        const m3uContent = serialize(playlist);
+        await writeFile(playlistFile, m3uContent);
+
+        console.log(`Added ${secondsToAdd} seconds to start time of track at position ${trackIndex} in ${playlistFile}`);
         break;
       }
 
