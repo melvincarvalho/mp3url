@@ -19,12 +19,14 @@ Usage:
   mp3url serialize <input.json> [output.m3u] Serialize JSON to M3U
   mp3url create <output.m3u>                Create empty M3U file
   mp3url add <playlist.m3u> <url> [title] [duration]  Add track to playlist
+  mp3url swap <playlist.m3u> <index1> <index2>        Swap tracks in playlist
   mp3url help                               Show this help
 
 Examples:
   mp3url parse playlist.m3u playlist.json
   mp3url serialize playlist.json playlist.m3u
   mp3url add playlist.m3u https://example.com/song.mp3 "My Song" 180
+  mp3url swap playlist.m3u 0 3
 `;
 
 async function main () {
@@ -131,6 +133,48 @@ async function main () {
         await writeFile(playlistFile, m3uContent);
 
         console.log(`Added track to ${playlistFile}`);
+        break;
+      }
+
+      case 'swap': {
+        const playlistFile = args[1];
+        const index1 = parseInt(args[2]);
+        const index2 = parseInt(args[3]);
+
+        if (!playlistFile || isNaN(index1) || isNaN(index2)) {
+          console.error('Error: Playlist file and two valid indices required');
+          console.log(usage);
+          process.exit(1);
+        }
+
+        // Read the playlist
+        let playlist;
+        try {
+          const content = await readFile(playlistFile, 'utf8');
+          playlist = parse(content);
+        } catch (err) {
+          console.error(`Error reading playlist file: ${err.message}`);
+          process.exit(1);
+        }
+
+        // Validate the indices
+        if (index1 < 0 || index2 < 0 ||
+          index1 >= playlist.tracks.length ||
+          index2 >= playlist.tracks.length) {
+          console.error(`Error: Indices must be between 0 and ${playlist.tracks.length - 1}`);
+          process.exit(1);
+        }
+
+        // Swap the tracks
+        const temp = playlist.tracks[index1];
+        playlist.tracks[index1] = playlist.tracks[index2];
+        playlist.tracks[index2] = temp;
+
+        // Save the playlist
+        const m3uContent = serialize(playlist);
+        await writeFile(playlistFile, m3uContent);
+
+        console.log(`Swapped tracks at positions ${index1} and ${index2} in ${playlistFile}`);
         break;
       }
 
