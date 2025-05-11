@@ -1,0 +1,27 @@
+{
+  "tracks": [
+    {
+      "url": "https://example.com/song.mp3",
+      "title": "My Favorite Song",
+      "duration": 180,
+      "directives": [
+        {
+          "type": "EXTVLCOPT",
+          "key": "start-time",
+          "value": "15"
+        }
+      ]
+    },
+    {
+      "url": "https://example.com/song2.mp3",
+      "title": "Another Great Song",
+      "duration": 240,
+      "directives": []
+    }
+  ],
+  "headers": [
+    {
+      "type": "EXTM3U"
+    }
+  ]
+}

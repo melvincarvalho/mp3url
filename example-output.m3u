@@ -1,0 +1,6 @@
+#EXTM3U
+#EXTINF:195,Brand New Song
+#EXTVLCOPT:start-time=30
+https://example.com/new-song.mp3
+#EXTINF:210,Another Amazing Song
+https://example.com/another-song.mp3
