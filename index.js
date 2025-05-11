@@ -44,13 +44,21 @@ export function parse (content) {
         const directive = line.substring(11);
         const [key, value] = directive.split('=');
 
-        if (currentTrack) {
-          currentTrack.directives.push({
-            type: 'EXTVLCOPT',
-            key,
-            value
-          });
+        // Create a new track if none exists - being lenient
+        if (!currentTrack) {
+          currentTrack = {
+            url: '',
+            title: '',
+            duration: -1,
+            directives: []
+          };
         }
+
+        currentTrack.directives.push({
+          type: 'EXTVLCOPT',
+          key,
+          value
+        });
       }
       // Handle EXTM3U header
       else if (line === '#EXTM3U') {

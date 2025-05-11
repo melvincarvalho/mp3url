@@ -69,11 +69,33 @@ https://example.com/song.mp3`;
   console.log('✓ VLC directives are parsed correctly');
 }
 
+// Test 4: Lenient parsing of simplified playlists
+function testLenientParsing () {
+  console.log('Test 4: Lenient parsing of simplified playlists');
+
+  const content = `#EXTVLCOPT:start-time=15
+https://example.com/song.mp3`;
+
+  const playlist = parse(content);
+
+  assert.equal(playlist.tracks.length, 1, 'Playlist should have 1 track');
+  const track = playlist.tracks[0];
+
+  assert.equal(track.url, 'https://example.com/song.mp3', 'Track URL should match');
+  assert.equal(track.directives.length, 1, 'Track should have 1 directive');
+  assert.equal(track.directives[0].type, 'EXTVLCOPT', 'Directive should be of type EXTVLCOPT');
+  assert.equal(track.directives[0].key, 'start-time', 'Directive key should be start-time');
+  assert.equal(track.directives[0].value, '15', 'Directive value should be 15');
+
+  console.log('✓ Simplified playlists are parsed correctly');
+}
+
 // Run all tests
 try {
   testParseAndSerialize();
   testCreatePlaylist();
   testVLCDirectives();
+  testLenientParsing();
   console.log('\nAll tests passed! ✓');
 } catch (error) {
   console.error('\n❌ Test failed:', error.message);

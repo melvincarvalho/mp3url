@@ -7,6 +7,7 @@ A JavaScript library for parsing and serializing M3U playlist files.
 - Parse M3U files into JSON objects
 - Serialize JSON objects back to M3U format
 - Support for common M3U directives like `#EXTINF` and `#EXTVLCOPT`
+- Lenient parsing for simplified playlist formats
 - Create and manipulate playlists programmatically
 - Command-line interface for quick file operations
 
@@ -143,6 +144,17 @@ The library understands and can parse/serialize the following directives:
 - `#EXTINF:duration,title`: Track information
 - `#EXTVLCOPT:key=value`: VLC specific options
 - Any other directive is preserved as raw text
+
+### Lenient Parsing
+
+The parser is designed to handle simplified M3U formats. For example, the following minimal playlist will parse correctly:
+
+```
+#EXTVLCOPT:start-time=15
+https://example.com/song.mp3
+```
+
+This will be parsed as a track with the start-time directive, even without the typical `#EXTINF` line.
 
 ## Examples
 
