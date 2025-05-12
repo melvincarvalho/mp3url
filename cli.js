@@ -21,6 +21,7 @@ Usage:
   mp3url add <playlist.m3u> <url> [title] [duration]  Add track to playlist
   mp3url swap <playlist.m3u> <index1> <index2>        Swap tracks in playlist
   mp3url addtime <playlist.m3u> <seconds> [index]     Add seconds to track start time
+  mp3url setlength <playlist.m3u> <index> <duration>  Set duration of track in seconds
   mp3url help                               Show this help
 
 Examples:
@@ -29,6 +30,7 @@ Examples:
   mp3url add playlist.m3u https://example.com/song.mp3 "My Song" 180
   mp3url swap playlist.m3u 0 3
   mp3url addtime playlist.m3u 15 0
+  mp3url setlength playlist.m3u 2 240
 `;
 
 async function main () {
@@ -233,6 +235,44 @@ async function main () {
         await writeFile(playlistFile, m3uContent);
 
         console.log(`Added ${secondsToAdd} seconds to start time of track at position ${trackIndex} in ${playlistFile}`);
+        break;
+      }
+
+      case 'setlength': {
+        const playlistFile = args[1];
+        const trackIndex = parseInt(args[2]);
+        const duration = parseFloat(args[3]);
+
+        if (!playlistFile || isNaN(trackIndex) || isNaN(duration)) {
+          console.error('Error: Playlist file, valid track index, and duration in seconds required');
+          console.log(usage);
+          process.exit(1);
+        }
+
+        // Read the playlist
+        let playlist;
+        try {
+          const content = await readFile(playlistFile, 'utf8');
+          playlist = parse(content);
+        } catch (err) {
+          console.error(`Error reading playlist file: ${err.message}`);
+          process.exit(1);
+        }
+
+        // Validate the index
+        if (trackIndex < 0 || trackIndex >= playlist.tracks.length) {
+          console.error(`Error: Track index must be between 0 and ${playlist.tracks.length - 1}`);
+          process.exit(1);
+        }
+
+        // Update the track duration
+        playlist.tracks[trackIndex].duration = duration;
+
+        // Save the playlist
+        const m3uContent = serialize(playlist);
+        await writeFile(playlistFile, m3uContent);
+
+        console.log(`Set duration of track at position ${trackIndex} to ${duration} seconds in ${playlistFile}`);
         break;
       }
 
