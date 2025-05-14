@@ -152,14 +152,32 @@
           tracks: []
         }
 
+        // Fixed thumbnail URLs for each media type
+        const thumbnailUrls = {
+          'Big Buck Bunny (Sample)':
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Big_buck_bunny_poster_big.jpg/220px-Big_buck_bunny_poster_big.jpg',
+          'HTML5 Test Video':
+            'https://www.html5rocks.com/static/demos/videos/poster.jpg',
+          'Elephants Dream (Sample)':
+            'https://orange.blender.org/wp-content/themes/orange/images/media/gallery/t_butterflyrender.jpg',
+          'Sintel Trailer':
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Sintel_poster.jpg/220px-Sintel_poster.jpg',
+          'Test Pattern Audio':
+            'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=300'
+        }
+
         // Map the M3U tracks to the app format
         playlistData.tracks = parsedM3U.tracks.map((track, index) => {
           // Determine if it's an audio or video based on extension
           const isAudio = track.url.match(/\.(mp3|ogg|wav|aac)$/i) !== null
           const mediaType = isAudio ? 'audio' : 'video'
 
-          // Generate thumbnail based on media type
-          const thumbnailQuery = isAudio ? 'music,audio' : 'video,movie'
+          // Use fixed thumbnail or fallback to generated ones
+          const thumbnail =
+            thumbnailUrls[track.title] ||
+            `https://source.unsplash.com/300x200/?${
+              isAudio ? 'music,audio' : 'video,movie'
+            },${index}`
 
           // Get duration string or default
           const durationStr =
@@ -182,7 +200,7 @@
             duration: durationStr,
             plays: Math.floor(Math.random() * 1000000) + 10000,
             url: track.url, // Store the actual URL for playback
-            thumbnail: `https://source.unsplash.com/random/300x200/?${thumbnailQuery},${index}`,
+            thumbnail: thumbnail,
             isPlaying: index === 0,
             mediaType: mediaType,
             // Store VLC options if any
@@ -884,12 +902,13 @@
                                 : 'bg-white/50 hover:bg-white/80'} cursor-pointer"
                             >
                               <div
-                                class="w-10 h-10 rounded overflow-hidden mr-3 flex-shrink-0"
+                                class="w-10 h-10 rounded overflow-hidden mr-3 flex-shrink-0 bg-gray-100 border border-gray-200"
                               >
                                 <img
                                   src=${track.thumbnail}
                                   alt=${track.title}
                                   class="w-full h-full object-cover"
+                                  onError="this.onerror=null; this.src='https://via.placeholder.com/300x200?text=Media';"
                                 />
                               </div>
                               <div class="flex-1 min-w-0">
@@ -981,12 +1000,13 @@
                                 : 'bg-white/50 hover:bg-white/80'} cursor-pointer"
                             >
                               <div
-                                class="w-12 h-12 rounded overflow-hidden mr-3 flex-shrink-0 relative"
+                                class="w-12 h-12 rounded overflow-hidden mr-3 flex-shrink-0 relative bg-gray-100 border border-gray-200"
                               >
                                 <img
                                   src=${track.thumbnail}
                                   alt=${track.title}
                                   class="w-full h-full object-cover"
+                                  onError="this.onerror=null; this.src='https://via.placeholder.com/300x200?text=Media';"
                                 />
                                 ${track.isPlaying
                                   ? html`
