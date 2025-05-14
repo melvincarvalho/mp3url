@@ -104,6 +104,27 @@
           opacity: 0.8;
         }
       }
+      /* Video container styles */
+      #videoContainer {
+        position: relative;
+        z-index: 2;
+        background-color: black;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      #videoContainer video {
+        max-height: 100%;
+        max-width: 100%;
+      }
+      /* Adjust the overlay for video content */
+      .media-overlay {
+        z-index: 3;
+        pointer-events: none;
+      }
+      .media-overlay.with-video button {
+        pointer-events: auto;
+      }
     </style>
   </head>
   <body class="min-h-screen">
@@ -296,8 +317,34 @@
                       mediaType === 'audio' ? 'audio' : 'video'
                     )
                     mediaElement.src = firstTrack.url
-                    mediaElement.style.display = 'none'
-                    document.body.appendChild(mediaElement)
+
+                    // Handle audio vs video elements differently
+                    if (mediaType === 'audio') {
+                      mediaElement.style.display = 'none'
+                      document.body.appendChild(mediaElement)
+                    } else {
+                      // For video, add it to the video container
+                      mediaElement.classList.add(
+                        'w-full',
+                        'h-full',
+                        'object-contain'
+                      )
+                      mediaElement.controls = false
+
+                      // Add the video to the video container after a small delay to ensure DOM is ready
+                      setTimeout(() => {
+                        const videoContainer =
+                          document.getElementById('videoContainer')
+                        if (videoContainer) {
+                          videoContainer.innerHTML = ''
+                          videoContainer.appendChild(mediaElement)
+                        } else {
+                          // Fallback
+                          mediaElement.style.display = 'none'
+                          document.body.appendChild(mediaElement)
+                        }
+                      }, 100)
+                    }
 
                     // Add event listeners
                     mediaElement.addEventListener('timeupdate', () => {
@@ -363,6 +410,12 @@
           if (this.state.mediaElement) {
             this.state.mediaElement.pause()
             this.state.mediaElement.remove()
+
+            // Clear the video container
+            const videoContainer = document.getElementById('videoContainer')
+            if (videoContainer) {
+              videoContainer.innerHTML = ''
+            }
           }
 
           const updatedPlaylist = { ...this.state.playlist }
@@ -383,8 +436,28 @@
             isAudio ? 'audio' : 'video'
           )
           mediaElement.src = selectedTrack.url
-          mediaElement.style.display = 'none'
-          document.body.appendChild(mediaElement)
+
+          // Set proper attributes for the media element
+          if (isAudio) {
+            // Audio elements can be hidden
+            mediaElement.style.display = 'none'
+            document.body.appendChild(mediaElement)
+          } else {
+            // Video elements need to be visible
+            mediaElement.classList.add('w-full', 'h-full', 'object-contain')
+            mediaElement.controls = false
+
+            // Add the video to the video container
+            const videoContainer = document.getElementById('videoContainer')
+            if (videoContainer) {
+              videoContainer.innerHTML = ''
+              videoContainer.appendChild(mediaElement)
+            } else {
+              // Fallback if container not found
+              mediaElement.style.display = 'none'
+              document.body.appendChild(mediaElement)
+            }
+          }
 
           // Apply VLC options if any
           if (
@@ -556,14 +629,28 @@
                         <img
                           src=${currentTrack.thumbnail}
                           alt=${currentTrack.title}
-                          class="w-full h-full object-cover"
+                          class="w-full h-full object-cover ${currentTrack.mediaType ===
+                            'video' && this.state.mediaElement
+                            ? 'hidden'
+                            : ''}"
                         />
+                        <!-- Video container -->
                         <div
-                          class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"
+                          id="videoContainer"
+                          class="w-full h-full ${currentTrack.mediaType ===
+                            'video' && this.state.mediaElement
+                            ? ''
+                            : 'hidden'}"
+                        ></div>
+                        <div
+                          class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent media-overlay ${currentTrack.mediaType ===
+                          'video'
+                            ? 'with-video'
+                            : ''}"
                         ></div>
                         <button
                           onClick=${this.togglePlay}
-                          class="absolute inset-0 flex items-center justify-center"
+                          class="absolute inset-0 flex items-center justify-center z-10"
                         >
                           <div
                             class="w-16 h-16 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center"
