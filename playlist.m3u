@@ -1,0 +1,27 @@
+#EXTM3U
+#EXTINF:-1 tvg-logo="images/BigBuckBunny.jpg" group-title="Movies",Big Buck Bunny
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4
+#EXTINF:-1 tvg-logo="images/ElephantsDream.jpg" group-title="Movies",Elephant Dream
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4
+#EXTINF:-1 tvg-logo="images/ForBiggerBlazes.jpg" group-title="Movies",For Bigger Blazes
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4
+#EXTINF:-1 tvg-logo="images/ForBiggerEscapes.jpg" group-title="Movies",For Bigger Escape
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4
+#EXTINF:-1 tvg-logo="images/ForBiggerFun.jpg" group-title="Movies",For Bigger Fun
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4
+#EXTINF:-1 tvg-logo="images/ForBiggerJoyrides.jpg" group-title="Movies",For Bigger Joyrides
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4
+#EXTINF:-1 tvg-logo="images/ForBiggerMeltdowns.jpg" group-title="Movies",For Bigger Meltdowns
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4
+#EXTINF:-1 tvg-logo="images/Sintel.jpg" group-title="Movies",Sintel
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4
+#EXTINF:-1 tvg-logo="images/SubaruOutbackOnStreetAndDirt.jpg" group-title="Movies",Subaru Outback On Street And Dirt
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4
+#EXTINF:-1 tvg-logo="images/TearsOfSteel.jpg" group-title="Movies",Tears of Steel
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4
+#EXTINF:-1 tvg-logo="images/VolkswagenGTIReview.jpg" group-title="Movies",Volkswagen GTI Review
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4
+#EXTINF:-1 tvg-logo="images/WeAreGoingOnBullrun.jpg" group-title="Movies",We Are Going On Bullrun
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4
+#EXTINF:-1 tvg-logo="images/WhatCarCanYouGetForAGrand.jpg" group-title="Movies",What care can you get for a grand?
+http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4
