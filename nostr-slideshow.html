@@ -384,6 +384,11 @@
         color: white;
       }
 
+      .video-badge {
+        background: linear-gradient(135deg, var(--secondary), #be185d);
+        color: white;
+      }
+
       .image-badge {
         background: linear-gradient(135deg, var(--success), #059669);
         color: white;
@@ -975,9 +980,22 @@
                   currentTrack.width = 1200
                   currentTrack.height = 800
                 }
-              } else {
+              } else if (currentTrack.mediaType === 'video') {
+                // For videos, generate a placeholder image
                 currentTrack.image = this.generatePlaceholderImage(
-                  currentTrack.title || 'Unknown Track'
+                  currentTrack.title || 'Video',
+                  'video'
+                )
+                currentTrack.width = 1920
+                currentTrack.height = 1080
+                if (!currentTrack.title || currentTrack.title.trim() === '') {
+                  currentTrack.title = `Video ${tracks.length + 1}`
+                }
+              } else {
+                // Audio files
+                currentTrack.image = this.generatePlaceholderImage(
+                  currentTrack.title || 'Unknown Track',
+                  'audio'
                 )
                 currentTrack.width = 400
                 currentTrack.height = 400
@@ -1001,6 +1019,16 @@
             '.flac',
             '.wma'
           ]
+          const videoExtensions = [
+            '.mp4',
+            '.webm',
+            '.avi',
+            '.mov',
+            '.mkv',
+            '.wmv',
+            '.flv',
+            '.m4v'
+          ]
           const imageExtensions = [
             '.jpg',
             '.jpeg',
@@ -1014,10 +1042,12 @@
 
           if (audioExtensions.some(ext => urlLower.includes(ext))) {
             return 'audio'
+          } else if (videoExtensions.some(ext => urlLower.includes(ext))) {
+            return 'video'
           } else if (imageExtensions.some(ext => urlLower.includes(ext))) {
             return 'image'
           }
-          return 'audio'
+          return 'audio' // default fallback
         }
 
         static getImageDimensions(url) {
@@ -1030,7 +1060,7 @@
           })
         }
 
-        static generatePlaceholderImage(title) {
+        static generatePlaceholderImage(title, type = 'audio') {
           const canvas = document.createElement('canvas')
           canvas.width = 400
           canvas.height = 400
@@ -1061,7 +1091,16 @@
           ctx.font = 'bold 120px Arial'
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
-          ctx.fillText('♪', 200, 200)
+
+          // Different icons for different media types
+          let icon = '♪' // default audio
+          if (type === 'video') {
+            icon = '🎬'
+          } else if (type === 'image') {
+            icon = '🖼️'
+          }
+
+          ctx.fillText(icon, 200, 200)
 
           return canvas.toDataURL()
         }
@@ -1139,6 +1178,7 @@
           if (track.mediaType === 'audio') {
             audioManager.play(track)
           } else {
+            // For images and videos, open in new tab
             handleClick()
           }
         }
@@ -1165,15 +1205,25 @@
               <img src=${track.image} alt=${track.title} loading="lazy" />
               <div class="media-overlay" onClick=${handlePlayClick}>
                 <div class="play-button">
-                  ${track.mediaType === 'image' ? '🔍' : '▶️'}
+                  ${track.mediaType === 'image'
+                    ? '🔍'
+                    : track.mediaType === 'video'
+                    ? '▶️'
+                    : '▶️'}
                 </div>
               </div>
               <div
                 class="media-type-badge ${track.mediaType === 'image'
                   ? 'image-badge'
+                  : track.mediaType === 'video'
+                  ? 'video-badge'
                   : 'audio-badge'}"
               >
-                ${track.mediaType === 'image' ? '📷 Image' : '🎵 Audio'}
+                ${track.mediaType === 'image'
+                  ? '📷 Image'
+                  : track.mediaType === 'video'
+                  ? '🎬 Video'
+                  : '🎵 Audio'}
               </div>
             </div>
             <div class="media-info">
@@ -1181,14 +1231,21 @@
                 ${track.title ||
                 (track.mediaType === 'image'
                   ? `Image ${track.id + 1}`
+                  : track.mediaType === 'video'
+                  ? `Video ${track.id + 1}`
                   : 'Unknown Track')}
               </h3>
               <p class="media-artist">
                 ${track.artist ||
-                (track.mediaType === 'image' ? 'Image File' : 'Unknown Artist')}
+                (track.mediaType === 'image'
+                  ? 'Image File'
+                  : track.mediaType === 'video'
+                  ? 'Video File'
+                  : 'Unknown Artist')}
               </p>
               <div class="media-meta">
-                ${track.duration > 0 && track.mediaType === 'audio'
+                ${track.duration > 0 &&
+                (track.mediaType === 'audio' || track.mediaType === 'video')
                   ? html`<div class="duration-badge">
                       ${formatDuration(track.duration)}
                     </div>`
@@ -1419,7 +1476,7 @@
         }
 
         const handleMediaClick = track => {
-          if (track.mediaType === 'image') {
+          if (track.mediaType === 'image' || track.mediaType === 'video') {
             window.open(track.url, '_blank')
           } else {
             audioManager.play(track)
@@ -1427,6 +1484,7 @@
         }
 
         const audioCount = tracks.filter(t => t.mediaType === 'audio').length
+        const videoCount = tracks.filter(t => t.mediaType === 'video').length
         const imageCount = tracks.filter(t => t.mediaType === 'image').length
 
         return html`
@@ -1462,6 +1520,7 @@
                 <div class="stats">
                   <div class="stat-item">Total: ${tracks.length}</div>
                   <div class="stat-item">Audio: ${audioCount}</div>
+                  <div class="stat-item">Videos: ${videoCount}</div>
                   <div class="stat-item">Images: ${imageCount}</div>
                 </div>
               `}
