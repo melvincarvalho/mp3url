@@ -1038,6 +1038,18 @@
                 currentTrack.duration = parseFloat(match[1]) || 0
                 currentTrack.title = match[2].trim()
 
+                // Extract tvg-logo attribute for video thumbnails
+                const logoMatch = line.match(/tvg-logo="([^"]*)"/)
+                if (logoMatch) {
+                  currentTrack.thumbnail = logoMatch[1]
+                }
+
+                // Extract group-title attribute
+                const groupMatch = line.match(/group-title="([^"]*)"/)
+                if (groupMatch) {
+                  currentTrack.group = groupMatch[1]
+                }
+
                 const artistMatch =
                   currentTrack.title.match(/^([^-]+)\s*-\s*(.+)$/)
                 if (artistMatch) {
@@ -1069,13 +1081,80 @@
                   currentTrack.height = 800
                 }
               } else if (currentTrack.mediaType === 'video') {
-                // For videos, generate a placeholder image
-                currentTrack.image = this.generatePlaceholderImage(
-                  currentTrack.title || 'Video',
-                  'video'
-                )
-                currentTrack.width = 1920
-                currentTrack.height = 1080
+                // Use tvg-logo thumbnail if available, otherwise generate placeholder
+                if (currentTrack.thumbnail) {
+                  // Handle relative paths by converting to absolute URLs or using fallbacks
+                  let thumbnailUrl = currentTrack.thumbnail
+
+                  // If it's a relative path, try to make it absolute or use a fallback
+                  if (
+                    !thumbnailUrl.startsWith('http') &&
+                    !thumbnailUrl.startsWith('data:')
+                  ) {
+                    // For demo purposes, map common video thumbnails to actual URLs
+                    const thumbnailMap = {
+                      'images/BigBuckBunny.jpg':
+                        'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Big_buck_bunny_poster_big.jpg/220px-Big_buck_bunny_poster_big.jpg',
+                      'images/ElephantsDream.jpg':
+                        'https://orange.blender.org/wp-content/themes/orange/images/media/gallery/t_butterflyrender.jpg',
+                      'images/ForBiggerBlazes.jpg':
+                        'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg',
+                      'images/ForBiggerEscapes.jpg':
+                        'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerEscapes.jpg',
+                      'images/ForBiggerFun.jpg':
+                        'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerFun.jpg',
+                      'images/ForBiggerJoyrides.jpg':
+                        'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerJoyrides.jpg',
+                      'images/ForBiggerMeltdowns.jpg':
+                        'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerMeltdowns.jpg',
+                      'images/Sintel.jpg':
+                        'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Sintel_poster.jpg/220px-Sintel_poster.jpg',
+                      'images/SubaruOutbackOnStreetAndDirt.jpg':
+                        'https://storage.googleapis.com/gtv-videos-bucket/sample/images/SubaruOutbackOnStreetAndDirt.jpg',
+                      'images/TearsOfSteel.jpg':
+                        'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Tears_of_Steel_poster.jpg/220px-Tears_of_Steel_poster.jpg',
+                      'images/VolkswagenGTIReview.jpg':
+                        'https://storage.googleapis.com/gtv-videos-bucket/sample/images/VolkswagenGTIReview.jpg',
+                      'images/WeAreGoingOnBullrun.jpg':
+                        'https://storage.googleapis.com/gtv-videos-bucket/sample/images/WeAreGoingOnBullrun.jpg',
+                      'images/WhatCarCanYouGetForAGrand.jpg':
+                        'https://storage.googleapis.com/gtv-videos-bucket/sample/images/WhatCarCanYouGetForAGrand.jpg'
+                    }
+
+                    thumbnailUrl =
+                      thumbnailMap[currentTrack.thumbnail] ||
+                      this.generatePlaceholderImage(
+                        currentTrack.title || 'Video',
+                        'video'
+                      )
+                  }
+
+                  currentTrack.image = thumbnailUrl
+
+                  // Only try to get dimensions if it's a real URL
+                  if (thumbnailUrl.startsWith('http')) {
+                    try {
+                      const dimensions = await this.getImageDimensions(
+                        thumbnailUrl
+                      )
+                      currentTrack.width = dimensions.width
+                      currentTrack.height = dimensions.height
+                    } catch (error) {
+                      currentTrack.width = 1920
+                      currentTrack.height = 1080
+                    }
+                  } else {
+                    currentTrack.width = 1920
+                    currentTrack.height = 1080
+                  }
+                } else {
+                  currentTrack.image = this.generatePlaceholderImage(
+                    currentTrack.title || 'Video',
+                    'video'
+                  )
+                  currentTrack.width = 1920
+                  currentTrack.height = 1080
+                }
                 if (!currentTrack.title || currentTrack.title.trim() === '') {
                   currentTrack.title = `Video ${tracks.length + 1}`
                 }
