@@ -24,7 +24,7 @@ Music and media curation is a core part of internet culture. By supporting `.m3u
 
 This NIP recommends a new kind value:
 
-* `30311` — M3U Playlist Event (ephemeral or persistent)
+* `30313` — M3U Playlist Event (ephemeral or persistent)
 
 > Alternatively, clients MAY use a generic kind (e.g. `1`) if playlists are mixed with textual commentary.
 
@@ -38,7 +38,7 @@ The `content` field MUST contain a valid `.m3u` or `.m3u8` text format. Clients 
 
 ```json
 {
-  "kind": 30311,
+  "kind": 30313,
   "content": "#EXTM3U\n#EXTINF:123, Sample artist - Sample title\nhttp://www.example.com/music/sample.mp3\n#EXTINF:321, Another track\nhttps://ipfs.io/ipfs/QmExample",
   "tags": [["d", "lofi-mixtape"], ["alt", "M3U playlist"]]
 }
