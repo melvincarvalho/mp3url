@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Melodic - Beautiful Playlist Experience</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              lavender: '#E6E6FA',
+              lilac: '#C8A2C8',
+              periwinkle: '#CCCCFF',
+              mauve: '#E0B0FF',
+              plum: '#DDA0DD',
+              violet: '#9370DB',
+              amethyst: '#9966CC'
+            }
+          }
+        }
+      }
+    </script>
+    <!-- Import mp3url library -->
+    <script type="module">
+      import * as mp3url from './index.js'
+      // Expose the library to window object after module loads
+      window.mp3urlLoaded = false
+      window.mp3url = mp3url
+      window.mp3urlLoaded = true
+    </script>
+    <!-- M3U Playlist Data -->
+    <script id="playlistM3U" type="text/plain">
+      #EXTM3U
+      #EXTINF:-1,Big Buck Bunny (Sample)
+      https://www.w3schools.com/html/mov_bbb.mp4
+      #EXTINF:-1,HTML5 Test Video
+      #EXTVLCOPT:start-time=6
+      https://www.w3schools.com/html/movie.mp4
+      #EXTINF:-1,Elephants Dream (Sample)
+      https://archive.org/download/ElephantsDream/ed_hd.mp4
+      #EXTINF:-1,Sintel Trailer
+      https://download.blender.org/durian/trailer/sintel_trailer-720p.mp4
+      #EXTINF:-1,Test Pattern Audio
+      https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3
+    </script>
+    <!-- Preact and HTM -->
+    <script src="https://unpkg.com/preact@10.11.3/dist/preact.min.js"></script>
+    <script src="https://unpkg.com/htm@3.1.1/dist/htm.js"></script>
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Google Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: 'Poppins', sans-serif;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e6e6fa 100%);
+      }
+      .playlist-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(147, 112, 219, 0.2);
+      }
+      .playlist-item {
+        transition: all 0.3s ease;
+      }
+      .progress-bar {
+        background: linear-gradient(90deg, #9370db 0%, #e0b0ff 100%);
+      }
+      .glass-effect {
+        backdrop-filter: blur(10px);
+        background-color: rgba(255, 255, 255, 0.7);
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #c8a2c8;
+        border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #9370db;
+      }
+      .animate-pulse-slow {
+        animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.8;
+        }
+      }
+      /* Video container styles */
+      #videoContainer {
+        position: relative;
+        z-index: 2;
+        background-color: black;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      #videoContainer video {
+        max-height: 100%;
+        max-width: 100%;
+      }
+      /* Adjust the overlay for video content */
+      .media-overlay {
+        z-index: 3;
+        pointer-events: none;
+      }
+      .media-overlay.with-video button {
+        pointer-events: auto;
+      }
+      /* Video player controls */
+      .video-controls-overlay {
+        z-index: 20;
+        transition: opacity 0.3s ease;
+      }
+      .video-controls-overlay:hover {
+        opacity: 1 !important;
+      }
+      .video-control-button {
+        transition: all 0.2s ease;
+      }
+      .video-control-button:hover {
+        transform: scale(1.1);
+        background-color: rgba(255, 255, 255, 0.3);
+      }
+      @media (max-width: 640px) {
+        .video-controls-overlay .video-progress {
+          height: 3px;
+        }
+      }
+    </style>
+  </head>
+  <body class="min-h-screen">
+    <div id="app"></div>
+
+    <script>
+      // Initialize htm with Preact
+      const html = htm.bind(preact.h)
+      const { Component, render } = preact
+
+      // Get M3U content and parse it using mp3url
+      const m3uContent = document.getElementById('playlistM3U').textContent
+
+      // Function to convert parsed M3U data to app format
+      function convertM3UToAppFormat(parsedM3U) {
+        // Generate playlist metadata
+        const playlistData = {
+          title: 'Video & Audio Samples',
+          creator: 'Melodic',
+          description:
+            'A collection of sample videos and audio files for testing.',
+          followers: 8765,
+          likes: 4321,
+          currentTrack: 0,
+          tracks: []
+        }
+
+        // Fixed thumbnail URLs for each media type
+        const thumbnailUrls = {
+          'Big Buck Bunny (Sample)':
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Big_buck_bunny_poster_big.jpg/220px-Big_buck_bunny_poster_big.jpg',
+          'HTML5 Test Video':
+            'https://www.html5rocks.com/static/demos/videos/poster.jpg',
+          'Elephants Dream (Sample)':
+            'https://orange.blender.org/wp-content/themes/orange/images/media/gallery/t_butterflyrender.jpg',
+          'Sintel Trailer':
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Sintel_poster.jpg/220px-Sintel_poster.jpg',
+          'Test Pattern Audio':
+            'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=300'
+        }
+
+        // Map the M3U tracks to the app format
+        playlistData.tracks = parsedM3U.tracks.map((track, index) => {
+          // Determine if it's an audio or video based on extension
+          const isAudio = track.url.match(/\.(mp3|ogg|wav|aac)$/i) !== null
+          const mediaType = isAudio ? 'audio' : 'video'
+
+          // Use fixed thumbnail or fallback to generated ones
+          const thumbnail =
+            thumbnailUrls[track.title] ||
+            `https://source.unsplash.com/300x200/?${
+              isAudio ? 'music,audio' : 'video,movie'
+            },${index}`
+
+          // Get duration string or default
+          const durationStr =
+            track.duration > 0
+              ? Math.floor(track.duration / 60) +
+                ':' +
+                (track.duration % 60).toString().padStart(2, '0')
+              : index === 0
+              ? '2:48'
+              : index === 1
+              ? '1:42'
+              : index === 4
+              ? '3:30'
+              : '4:15'
+
+          return {
+            id: index + 1,
+            title: track.title || `Untitled Track ${index + 1}`,
+            artist: track.title ? 'Various Artists' : 'Unknown Artist',
+            duration: durationStr,
+            plays: Math.floor(Math.random() * 1000000) + 10000,
+            url: track.url, // Store the actual URL for playback
+            thumbnail: thumbnail,
+            isPlaying: index === 0,
+            mediaType: mediaType,
+            // Store VLC options if any
+            vlcOptions: track.directives
+              ? track.directives
+                  .filter(d => d.type === 'EXTVLCOPT')
+                  .reduce((acc, curr) => {
+                    acc[curr.key] = curr.value
+                    return acc
+                  }, {})
+              : {}
+          }
+        })
+
+        return playlistData
+      }
+
+      // Create a function to load the playlist asynchronously
+      async function loadPlaylist() {
+        try {
+          // Wait for module to load if needed
+          if (!window.mp3urlLoaded) {
+            await new Promise(resolve => {
+              const checkLoaded = () => {
+                if (window.mp3urlLoaded) {
+                  resolve()
+                } else {
+                  setTimeout(checkLoaded, 50)
+                }
+              }
+              checkLoaded()
+            })
+          }
+
+          if (!window.mp3url || !window.mp3url.parse) {
+            throw new Error('mp3url library or parse function not available')
+          }
+
+          // Get the content from the script element
+          const m3uContent = document.getElementById('playlistM3U').textContent
+
+          // Parse the M3U content using the imported mp3url library
+          const parsedM3U = window.mp3url.parse(m3uContent)
+
+          // Convert to app format
+          return convertM3UToAppFormat(parsedM3U)
+        } catch (error) {
+          console.error('Error parsing M3U playlist:', error)
+          // Return fallback data
+          return {
+            title: 'Error Loading Playlist',
+            creator: 'Melodic',
+            description:
+              'There was an error loading the playlist. ' + error.message,
+            followers: 0,
+            likes: 0,
+            currentTrack: 0,
+            tracks: [
+              {
+                id: 1,
+                title: 'Error Loading Media',
+                artist: 'Unknown',
+                duration: '0:00',
+                plays: 0,
+                url: '',
+                thumbnail: 'https://source.unsplash.com/random/300x200/?error',
+                isPlaying: false,
+                mediaType: 'audio'
+              }
+            ]
+          }
+        }
+      }
+
+      // Format number function
+      const formatNumber = num => {
+        if (num >= 1000000) {
+          return (num / 1000000).toFixed(1) + 'M'
+        } else if (num >= 1000) {
+          return (num / 1000).toFixed(1) + 'K'
+        }
+        return num
+      }
+
+      // App Component
+      class App extends Component {
+        constructor() {
+          super()
+          this.state = {
+            playlist: null,
+            isPlaying: false,
+            currentTime: 0,
+            totalTime: 0,
+            volume: 80,
+            isFullscreen: false,
+            showPlaylistOnMobile: false,
+            mediaElement: null
+          }
+        }
+
+        componentDidMount() {
+          // Load the playlist when component mounts
+          loadPlaylist()
+            .then(playlist => {
+              // Safety check for missing tracks
+              if (
+                !playlist ||
+                !playlist.tracks ||
+                playlist.tracks.length === 0
+              ) {
+                console.error('No tracks found in playlist')
+                return
+              }
+
+              const firstTrack = playlist.tracks[0]
+              const initialDuration =
+                firstTrack && firstTrack.duration
+                  ? this.getTotalTimeFromDuration(firstTrack.duration)
+                  : 0
+
+              this.setState(
+                {
+                  playlist,
+                  totalTime: initialDuration
+                },
+                () => {
+                  // Only try to load media if we have a valid track with URL
+                  if (firstTrack && firstTrack.url) {
+                    // Auto-load the first track (but don't auto-play)
+                    const mediaType = firstTrack.mediaType || 'audio'
+                    const mediaElement = document.createElement(
+                      mediaType === 'audio' ? 'audio' : 'video'
+                    )
+                    mediaElement.src = firstTrack.url
+
+                    // Handle audio vs video elements differently
+                    if (mediaType === 'audio') {
+                      mediaElement.style.display = 'none'
+                      document.body.appendChild(mediaElement)
+                    } else {
+                      // For video, add it to the video container
+                      mediaElement.classList.add(
+                        'w-full',
+                        'h-full',
+                        'object-contain'
+                      )
+                      mediaElement.controls = false
+
+                      // Add the video to the video container after a small delay to ensure DOM is ready
+                      setTimeout(() => {
+                        const videoContainer =
+                          document.getElementById('videoContainer')
+                        if (videoContainer) {
+                          videoContainer.innerHTML = ''
+                          videoContainer.appendChild(mediaElement)
+                        } else {
+                          // Fallback
+                          mediaElement.style.display = 'none'
+                          document.body.appendChild(mediaElement)
+                        }
+                      }, 100)
+                    }
+
+                    // Add event listeners
+                    mediaElement.addEventListener('timeupdate', () => {
+                      this.setState({
+                        currentTime: Math.floor(mediaElement.currentTime)
+                      })
+                    })
+
+                    mediaElement.addEventListener('ended', () => {
+                      this.setState({ isPlaying: false })
+                      // Auto-play next track if available
+                      const nextIndex =
+                        (playlist.currentTrack + 1) % playlist.tracks.length
+                      this.setCurrentTrack(nextIndex)
+                    })
+
+                    this.setState({ mediaElement })
+                  }
+                }
+              )
+            })
+            .catch(err => {
+              console.error('Error in componentDidMount:', err)
+            })
+        }
+
+        getTotalTimeFromDuration(durationStr) {
+          if (!durationStr || typeof durationStr !== 'string') {
+            return 0
+          }
+          try {
+            const parts = durationStr.split(':')
+            if (parts.length < 2) {
+              return 0
+            }
+            const minutes = parseInt(parts[0], 10) || 0
+            const seconds = parseInt(parts[1], 10) || 0
+            return minutes * 60 + seconds
+          } catch (e) {
+            console.error('Error parsing duration:', e)
+            return 0
+          }
+        }
+
+        togglePlay = () => {
+          const { isPlaying, mediaElement } = this.state
+
+          if (mediaElement) {
+            if (isPlaying) {
+              mediaElement.pause()
+            } else {
+              mediaElement.play()
+            }
+          }
+
+          this.setState({ isPlaying: !isPlaying })
+        }
+
+        setCurrentTrack = index => {
+          if (!this.state.playlist) return
+
+          // Clean up current media element if exists
+          if (this.state.mediaElement) {
+            this.state.mediaElement.pause()
+            this.state.mediaElement.remove()
+
+            // Clear the video container
+            const videoContainer = document.getElementById('videoContainer')
+            if (videoContainer) {
+              videoContainer.innerHTML = ''
+            }
+          }
+
+          const updatedPlaylist = { ...this.state.playlist }
+          updatedPlaylist.tracks = updatedPlaylist.tracks.map((track, i) => ({
+            ...track,
+            isPlaying: i === index
+          }))
+          updatedPlaylist.currentTrack = index
+
+          const selectedTrack = updatedPlaylist.tracks[index]
+          const totalTime = this.getTotalTimeFromDuration(
+            selectedTrack.duration
+          )
+
+          // Create appropriate media element
+          const isAudio = selectedTrack.mediaType === 'audio'
+          const mediaElement = document.createElement(
+            isAudio ? 'audio' : 'video'
+          )
+          mediaElement.src = selectedTrack.url
+
+          // Set proper attributes for the media element
+          if (isAudio) {
+            // Audio elements can be hidden
+            mediaElement.style.display = 'none'
+            document.body.appendChild(mediaElement)
+          } else {
+            // Video elements need to be visible
+            mediaElement.classList.add('w-full', 'h-full', 'object-contain')
+            mediaElement.controls = false
+
+            // Add the video to the video container
+            const videoContainer = document.getElementById('videoContainer')
+            if (videoContainer) {
+              videoContainer.innerHTML = ''
+              videoContainer.appendChild(mediaElement)
+            } else {
+              // Fallback if container not found
+              mediaElement.style.display = 'none'
+              document.body.appendChild(mediaElement)
+            }
+          }
+
+          // Apply VLC options if any
+          if (
+            selectedTrack.vlcOptions &&
+            selectedTrack.vlcOptions['start-time']
+          ) {
+            mediaElement.currentTime = parseFloat(
+              selectedTrack.vlcOptions['start-time']
+            )
+          }
+
+          // Add event listeners
+          mediaElement.addEventListener('timeupdate', () => {
+            this.setState({ currentTime: Math.floor(mediaElement.currentTime) })
+          })
+
+          mediaElement.addEventListener('ended', () => {
+            this.setState({ isPlaying: false })
+            // Auto-play next track if available
+            if (index < updatedPlaylist.tracks.length - 1) {
+              this.setCurrentTrack(index + 1)
+            }
+          })
+
+          // Start playing
+          mediaElement.play().catch(e => console.error('Playback error:', e))
+
+          this.setState({
+            playlist: updatedPlaylist,
+            isPlaying: true,
+            currentTime: 0,
+            totalTime,
+            mediaElement
+          })
+        }
+
+        toggleFullscreen = () => {
+          this.setState({ isFullscreen: !this.state.isFullscreen })
+        }
+
+        togglePlaylistOnMobile = () => {
+          this.setState({
+            showPlaylistOnMobile: !this.state.showPlaylistOnMobile
+          })
+        }
+
+        render() {
+          const {
+            playlist,
+            isPlaying,
+            currentTime,
+            totalTime,
+            volume,
+            isFullscreen,
+            showPlaylistOnMobile
+          } = this.state
+
+          // Show loading state until playlist is loaded
+          if (!playlist) {
+            return html`
+              <div class="flex items-center justify-center h-screen">
+                <div class="text-center">
+                  <div
+                    class="w-16 h-16 border-4 border-violet border-t-transparent rounded-full animate-spin mx-auto mb-4"
+                  ></div>
+                  <h2 class="text-xl font-semibold text-gray-700">
+                    Loading playlist...
+                  </h2>
+                </div>
+              </div>
+            `
+          }
+
+          // Make sure we have a valid currentTrack
+          if (
+            !playlist.tracks ||
+            playlist.tracks.length === 0 ||
+            playlist.currentTrack >= playlist.tracks.length
+          ) {
+            return html`
+              <div class="flex items-center justify-center h-screen">
+                <div
+                  class="text-center p-6 max-w-md mx-auto bg-white rounded-xl shadow-md"
+                >
+                  <i
+                    class="fas fa-exclamation-triangle text-amber-500 text-4xl mb-4"
+                  ></i>
+                  <h2 class="text-xl font-semibold text-gray-700 mb-2">
+                    Playlist Error
+                  </h2>
+                  <p class="text-gray-600">
+                    No tracks available or the playlist is empty. Please try
+                    again later.
+                  </p>
+                </div>
+              </div>
+            `
+          }
+
+          const currentTrack = playlist.tracks[playlist.currentTrack]
+          const progressPercent = totalTime
+            ? (currentTime / totalTime) * 100
+            : 0
+
+          return html`
+            <div
+              class="flex flex-col min-h-screen bg-gradient-to-br from-lavender to-white"
+            >
+              <!-- Header -->
+              <header
+                class="glass-effect sticky top-0 z-50 px-6 py-4 flex justify-between items-center border-b border-periwinkle/30"
+              >
+                <div class="flex items-center">
+                  <div
+                    class="w-10 h-10 rounded-full bg-gradient-to-r from-violet to-amethyst flex items-center justify-center text-white mr-3"
+                  >
+                    <i class="fas fa-music"></i>
+                  </div>
+                  <h1
+                    class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet to-amethyst"
+                  >
+                    Melodic
+                  </h1>
+                </div>
+                <div class="hidden md:flex items-center space-x-6">
+                  <a
+                    href="#"
+                    class="text-gray-600 hover:text-violet transition-colors"
+                    >Discover</a
+                  >
+                  <a
+                    href="#"
+                    class="text-gray-600 hover:text-violet transition-colors"
+                    >Library</a
+                  >
+                  <a
+                    href="#"
+                    class="text-gray-600 hover:text-violet transition-colors"
+                    >For You</a
+                  >
+                </div>
+                <div class="flex items-center space-x-4">
+                  <button
+                    class="hidden md:block px-4 py-2 rounded-full bg-white border border-lilac text-violet hover:bg-lavender transition-colors"
+                  >
+                    Upgrade
+                  </button>
+                  <div
+                    class="w-9 h-9 rounded-full bg-plum flex items-center justify-center text-white"
+                  >
+                    <i class="fas fa-user"></i>
+                  </div>
+                </div>
+              </header>
+
+              <main class="flex flex-col md:flex-row flex-1 overflow-hidden">
+                <!-- Main Content -->
+                <div
+                  class="${isFullscreen
+                    ? 'w-full'
+                    : 'w-full md:w-2/3'} p-6 flex flex-col"
+                >
+                  <!-- Current Track Info -->
+                  <div class="mb-6">
+                    <div class="flex flex-col md:flex-row md:items-end">
+                      <div
+                        class="relative w-full md:w-64 h-64 rounded-lg overflow-hidden shadow-xl mb-4 md:mb-0 md:mr-6"
+                      >
+                        <img
+                          src=${currentTrack.thumbnail}
+                          alt=${currentTrack.title}
+                          class="w-full h-full object-cover ${currentTrack.mediaType ===
+                            'video' && this.state.mediaElement
+                            ? 'hidden'
+                            : ''}"
+                        />
+                        <!-- Video container -->
+                        <div
+                          id="videoContainer"
+                          class="w-full h-full ${currentTrack.mediaType ===
+                            'video' && this.state.mediaElement
+                            ? ''
+                            : 'hidden'}"
+                        ></div>
+                        <!-- Control overlay for videos -->
+                        ${currentTrack.mediaType === 'video' &&
+                        this.state.mediaElement
+                          ? html`
+                              <div
+                                class="absolute inset-0 flex flex-col justify-between bg-gradient-to-t from-black/60 to-transparent opacity-0 hover:opacity-100 transition-all duration-300 z-20 video-controls-overlay"
+                              >
+                                <div class="p-3 flex justify-end">
+                                  <button
+                                    class="text-white p-2 rounded-full hover:bg-white/20 video-control-button"
+                                    onClick=${this.toggleFullscreen}
+                                  >
+                                    <i
+                                      class="fas ${isFullscreen
+                                        ? 'fa-compress'
+                                        : 'fa-expand'}"
+                                    ></i>
+                                  </button>
+                                </div>
+                                <div
+                                  class="p-3 flex justify-center items-center"
+                                >
+                                  <button
+                                    class="text-white p-2 mx-2 video-control-button"
+                                    onClick=${() => {
+                                      const { playlist } = this.state
+                                      const prevIndex =
+                                        playlist.currentTrack > 0
+                                          ? playlist.currentTrack - 1
+                                          : playlist.tracks.length - 1
+                                      this.setCurrentTrack(prevIndex)
+                                    }}
+                                  >
+                                    <i class="fas fa-step-backward"></i>
+                                  </button>
+                                  <button
+                                    class="text-white p-3 mx-2 bg-white/30 rounded-full video-control-button"
+                                    onClick=${this.togglePlay}
+                                  >
+                                    <i
+                                      class="fas ${isPlaying
+                                        ? 'fa-pause'
+                                        : 'fa-play'}"
+                                    ></i>
+                                  </button>
+                                  <button
+                                    class="text-white p-2 mx-2 video-control-button"
+                                    onClick=${() => {
+                                      const { playlist } = this.state
+                                      const nextIndex =
+                                        (playlist.currentTrack + 1) %
+                                        playlist.tracks.length
+                                      this.setCurrentTrack(nextIndex)
+                                    }}
+                                  >
+                                    <i class="fas fa-step-forward"></i>
+                                  </button>
+                                </div>
+                                <!-- Video progress indicator -->
+                                <div class="px-4 pb-2 video-progress">
+                                  <div
+                                    class="flex justify-between text-white text-xs mb-1"
+                                  >
+                                    <span
+                                      >${Math.floor(currentTime / 60)}:${(
+                                        currentTime % 60
+                                      )
+                                        .toString()
+                                        .padStart(2, '0')}</span
+                                    >
+                                    <span
+                                      >${Math.floor(totalTime / 60)}:${(
+                                        totalTime % 60
+                                      )
+                                        .toString()
+                                        .padStart(2, '0')}</span
+                                    >
+                                  </div>
+                                  <div class="h-1 bg-white/30 rounded-full">
+                                    <div
+                                      class="h-full bg-white rounded-full"
+                                      style="width: ${progressPercent}%"
+                                    ></div>
+                                  </div>
+                                </div>
+                              </div>
+                            `
+                          : ''}
+                        <div
+                          class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent media-overlay ${currentTrack.mediaType ===
+                          'video'
+                            ? 'with-video'
+                            : ''} ${isPlaying &&
+                          currentTrack.mediaType === 'video'
+                            ? 'opacity-0 hover:opacity-100 transition-opacity duration-300'
+                            : ''}"
+                        ></div>
+                        <button
+                          onClick=${this.togglePlay}
+                          class="absolute inset-0 flex items-center justify-center z-10 ${isPlaying &&
+                          currentTrack.mediaType === 'video'
+                            ? 'hidden'
+                            : ''}"
+                        >
+                          <div
+                            class="w-16 h-16 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center"
+                          >
+                            <i
+                              class="fas ${isPlaying
+                                ? 'fa-pause'
+                                : 'fa-play'} text-white text-xl"
+                            ></i>
+                          </div>
+                        </button>
+                      </div>
+                      <div class="flex-1">
+                        <h2 class="text-3xl font-bold text-gray-800">
+                          ${currentTrack.title}
+                        </h2>
+                        <p class="text-xl text-gray-600 mb-2">
+                          ${currentTrack.artist}
+                        </p>
+                        <div
+                          class="flex items-center text-sm text-gray-500 mb-4"
+                        >
+                          <span class="mr-4"
+                            ><i class="fas fa-play mr-1"></i> ${formatNumber(
+                              currentTrack.plays
+                            )}
+                            plays</span
+                          >
+                          <span
+                            ><i class="fas fa-clock mr-1"></i>
+                            ${currentTrack.duration}</span
+                          >
+                          <span class="ml-4">
+                            <i
+                              class="fas ${currentTrack.mediaType === 'audio'
+                                ? 'fa-music'
+                                : 'fa-video'} mr-1"
+                            ></i>
+                            ${currentTrack.mediaType === 'audio'
+                              ? 'Audio'
+                              : 'Video'}
+                          </span>
+                        </div>
+                        <div class="flex space-x-3">
+                          <button
+                            class="p-3 rounded-full bg-white shadow-md hover:shadow-lg transition-shadow"
+                          >
+                            <i class="fas fa-heart text-plum"></i>
+                          </button>
+                          <button
+                            class="p-3 rounded-full bg-white shadow-md hover:shadow-lg transition-shadow"
+                          >
+                            <i class="fas fa-share-alt text-violet"></i>
+                          </button>
+                          <button
+                            class="p-3 rounded-full bg-white shadow-md hover:shadow-lg transition-shadow"
+                          >
+                            <i class="fas fa-plus text-violet"></i>
+                          </button>
+                          <button
+                            class="p-3 rounded-full bg-white shadow-md hover:shadow-lg transition-shadow"
+                          >
+                            <i class="fas fa-ellipsis-h text-gray-600"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Player Controls -->
+                  <div class="glass-effect rounded-xl p-4 mb-6 shadow-lg">
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-sm text-gray-600"
+                        >${Math.floor(currentTime / 60)}:${(currentTime % 60)
+                          .toString()
+                          .padStart(2, '0')}</span
+                      >
+                      <span class="text-sm text-gray-600"
+                        >${Math.floor(totalTime / 60)}:${(totalTime % 60)
+                          .toString()
+                          .padStart(2, '0')}</span
+                      >
+                    </div>
+                    <div class="h-2 bg-gray-200 rounded-full mb-4 relative">
+                      <div
+                        class="progress-bar h-full rounded-full"
+                        style="width: ${progressPercent}%"
+                      ></div>
+                      <div
+                        class="absolute top-1/2 -translate-y-1/2"
+                        style="left: ${progressPercent}%"
+                      >
+                        <div
+                          class="w-4 h-4 rounded-full bg-white border-2 border-violet shadow-md"
+                        ></div>
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <div class="hidden md:flex items-center">
+                        <i class="fas fa-volume-up text-gray-600 mr-2"></i>
+                        <div class="w-24 h-1 bg-gray-200 rounded-full relative">
+                          <div
+                            class="progress-bar h-full rounded-full"
+                            style="width: ${volume}%"
+                          ></div>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-center space-x-6">
+                        <button
+                          class="text-gray-600 hover:text-violet transition-colors"
+                          onClick=${() => {
+                            const { playlist } = this.state
+                            const prevIndex =
+                              playlist.currentTrack > 0
+                                ? playlist.currentTrack - 1
+                                : playlist.tracks.length - 1
+                            this.setCurrentTrack(prevIndex)
+                          }}
+                        >
+                          <i class="fas fa-step-backward text-xl"></i>
+                        </button>
+                        <button
+                          onClick=${this.togglePlay}
+                          class="w-12 h-12 rounded-full bg-gradient-to-r from-violet to-amethyst flex items-center justify-center text-white shadow-lg"
+                        >
+                          <i
+                            class="fas ${isPlaying
+                              ? 'fa-pause'
+                              : 'fa-play'} text-lg"
+                          ></i>
+                        </button>
+                        <button
+                          class="text-gray-600 hover:text-violet transition-colors"
+                          onClick=${() => {
+                            const { playlist } = this.state
+                            const nextIndex =
+                              (playlist.currentTrack + 1) %
+                              playlist.tracks.length
+                            this.setCurrentTrack(nextIndex)
+                          }}
+                        >
+                          <i class="fas fa-step-forward text-xl"></i>
+                        </button>
+                      </div>
+                      <div class="flex items-center space-x-4">
+                        <button
+                          class="text-gray-600 hover:text-violet transition-colors"
+                        >
+                          <i class="fas fa-random"></i>
+                        </button>
+                        <button
+                          class="text-gray-600 hover:text-violet transition-colors"
+                        >
+                          <i class="fas fa-redo-alt"></i>
+                        </button>
+                        <button
+                          onClick=${this.toggleFullscreen}
+                          class="text-gray-600 hover:text-violet transition-colors"
+                        >
+                          <i
+                            class="fas ${isFullscreen
+                              ? 'fa-compress'
+                              : 'fa-expand'}"
+                          ></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Playlist Info -->
+                  <div class="glass-effect rounded-xl p-6 mb-6 shadow-lg">
+                    <div class="flex justify-between items-start mb-4">
+                      <div>
+                        <h2 class="text-2xl font-bold text-gray-800">
+                          ${playlist.title}
+                        </h2>
+                        <p class="text-gray-600">
+                          Created by ${playlist.creator}
+                        </p>
+                      </div>
+                      <div class="flex items-center space-x-4">
+                        <div class="text-sm text-gray-600">
+                          <i class="fas fa-users mr-1"></i> ${formatNumber(
+                            playlist.followers
+                          )}
+                        </div>
+                        <div class="text-sm text-gray-600">
+                          <i class="fas fa-heart mr-1"></i> ${formatNumber(
+                            playlist.likes
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <p class="text-gray-700">${playlist.description}</p>
+                  </div>
+
+                  <!-- Mobile Playlist Toggle -->
+                  <button
+                    onClick=${this.togglePlaylistOnMobile}
+                    class="md:hidden glass-effect rounded-xl p-4 mb-4 shadow-lg w-full flex justify-center items-center"
+                  >
+                    <span class="mr-2"
+                      >${showPlaylistOnMobile ? 'Hide' : 'Show'} Playlist</span
+                    >
+                    <i
+                      class="fas ${showPlaylistOnMobile
+                        ? 'fa-chevron-up'
+                        : 'fa-chevron-down'}"
+                    ></i>
+                  </button>
+
+                  <!-- Mobile Playlist -->
+                  <div
+                    class="${showPlaylistOnMobile
+                      ? 'block'
+                      : 'hidden'} md:hidden"
+                  >
+                    <div class="glass-effect rounded-xl p-4 shadow-lg">
+                      <h3 class="text-lg font-semibold mb-4">
+                        Playlist Tracks
+                      </h3>
+                      <div
+                        class="space-y-3 max-h-96 overflow-y-auto custom-scrollbar"
+                      >
+                        ${playlist.tracks.map(
+                          (track, index) => html`
+                            <div
+                              onClick=${() => this.setCurrentTrack(index)}
+                              class="playlist-item flex items-center p-3 rounded-lg ${track.isPlaying
+                                ? 'bg-periwinkle/30'
+                                : 'bg-white/50 hover:bg-white/80'} cursor-pointer"
+                            >
+                              <div
+                                class="w-10 h-10 rounded overflow-hidden mr-3 flex-shrink-0 bg-gray-100 border border-gray-200"
+                              >
+                                <img
+                                  src=${track.thumbnail}
+                                  alt=${track.title}
+                                  class="w-full h-full object-cover"
+                                  onError="this.onerror=null; this.src='https://via.placeholder.com/300x200?text=Media';"
+                                />
+                              </div>
+                              <div class="flex-1 min-w-0">
+                                <h4 class="font-medium text-gray-800 truncate">
+                                  ${track.title}
+                                </h4>
+                                <p class="text-sm text-gray-600 truncate">
+                                  ${track.artist}
+                                </p>
+                              </div>
+                              <div class="text-xs text-gray-500 ml-2">
+                                ${track.duration}
+                              </div>
+                              ${track.isPlaying
+                                ? html`<div class="ml-2 text-violet">
+                                    <i class="fas fa-volume-up"></i>
+                                  </div>`
+                                : ''}
+                            </div>
+                          `
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Recommendations -->
+                  <div class="hidden md:block mt-auto">
+                    <h3 class="text-xl font-semibold mb-4">
+                      You might also like
+                    </h3>
+                    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                      ${[1, 2, 3].map(
+                        i => html`
+                          <div
+                            class="glass-effect rounded-lg p-3 shadow-md hover:shadow-lg transition-shadow"
+                          >
+                            <div
+                              class="w-full h-32 rounded overflow-hidden mb-2"
+                            >
+                              <img
+                                src="https://source.unsplash.com/random/300x200/?music,${i}"
+                                alt="Recommendation"
+                                class="w-full h-full object-cover"
+                              />
+                            </div>
+                            <h4 class="font-medium text-gray-800">
+                              Recommended Playlist ${i}
+                            </h4>
+                            <p class="text-sm text-gray-600">Various Artists</p>
+                          </div>
+                        `
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Playlist Sidebar -->
+                <div
+                  class="${isFullscreen
+                    ? 'hidden'
+                    : 'hidden md:block md:w-1/3'} p-6 border-l border-periwinkle/30"
+                >
+                  <div
+                    class="glass-effect rounded-xl p-6 shadow-lg h-full flex flex-col"
+                  >
+                    <div class="flex justify-between items-center mb-6">
+                      <h3 class="text-xl font-semibold">Playlist Tracks</h3>
+                      <div class="flex items-center space-x-2">
+                        <button
+                          class="p-2 rounded-full hover:bg-lavender transition-colors"
+                        >
+                          <i class="fas fa-sort text-gray-600"></i>
+                        </button>
+                        <button
+                          class="p-2 rounded-full hover:bg-lavender transition-colors"
+                        >
+                          <i class="fas fa-filter text-gray-600"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="flex-1 overflow-y-auto custom-scrollbar">
+                      <div class="space-y-3">
+                        ${playlist.tracks.map(
+                          (track, index) => html`
+                            <div
+                              onClick=${() => this.setCurrentTrack(index)}
+                              class="playlist-item flex items-center p-3 rounded-lg ${track.isPlaying
+                                ? 'bg-periwinkle/30'
+                                : 'bg-white/50 hover:bg-white/80'} cursor-pointer"
+                            >
+                              <div
+                                class="w-12 h-12 rounded overflow-hidden mr-3 flex-shrink-0 relative bg-gray-100 border border-gray-200"
+                              >
+                                <img
+                                  src=${track.thumbnail}
+                                  alt=${track.title}
+                                  class="w-full h-full object-cover"
+                                  onError="this.onerror=null; this.src='https://via.placeholder.com/300x200?text=Media';"
+                                />
+                                ${track.isPlaying
+                                  ? html`
+                                      <div
+                                        class="absolute inset-0 flex items-center justify-center bg-black/30"
+                                      >
+                                        <div class="w-6 h-6">
+                                          <span
+                                            class="block w-1 h-3 bg-white rounded-full inline-block animate-pulse-slow"
+                                          ></span>
+                                          <span
+                                            class="block w-1 h-5 bg-white rounded-full inline-block mx-0.5 animate-pulse-slow"
+                                            style="animation-delay: 0.2s"
+                                          ></span>
+                                          <span
+                                            class="block w-1 h-2 bg-white rounded-full inline-block animate-pulse-slow"
+                                            style="animation-delay: 0.4s"
+                                          ></span>
+                                        </div>
+                                      </div>
+                                    `
+                                  : html`
+                                      <div
+                                        class="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity"
+                                      >
+                                        <i class="fas fa-play text-white"></i>
+                                      </div>
+                                    `}
+                              </div>
+                              <div class="flex-1 min-w-0">
+                                <h4 class="font-medium text-gray-800 truncate">
+                                  ${track.title}
+                                </h4>
+                                <p class="text-sm text-gray-600 truncate">
+                                  ${track.artist}
+                                </p>
+                              </div>
+                              <div class="text-xs text-gray-500 ml-2">
+                                ${track.duration}
+                              </div>
+                            </div>
+                          `
+                        )}
+                      </div>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-periwinkle/30">
+                      <button
+                        class="w-full py-2 rounded-lg bg-gradient-to-r from-violet to-amethyst text-white font-medium hover:opacity-90 transition-opacity"
+                      >
+                        Save Playlist
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </main>
+
+              <!-- Footer Player (Mobile) -->
+              <footer
+                class="md:hidden glass-effect sticky bottom-0 p-3 border-t border-periwinkle/30 z-40"
+              >
+                <div class="flex items-center">
+                  <div class="w-10 h-10 rounded overflow-hidden mr-3">
+                    <img
+                      src=${currentTrack.thumbnail}
+                      alt=${currentTrack.title}
+                      class="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <h4 class="font-medium text-gray-800 truncate">
+                      ${currentTrack.title}
+                    </h4>
+                    <p class="text-xs text-gray-600 truncate">
+                      ${currentTrack.artist}
+                    </p>
+                  </div>
+                  <div class="flex items-center space-x-3">
+                    <button
+                      onClick=${this.togglePlay}
+                      class="w-8 h-8 rounded-full bg-violet flex items-center justify-center text-white"
+                    >
+                      <i
+                        class="fas ${isPlaying
+                          ? 'fa-pause'
+                          : 'fa-play'} text-sm"
+                      ></i>
+                    </button>
+                    <button
+                      class="text-gray-600"
+                      onClick=${() => {
+                        const { playlist } = this.state
+                        const nextIndex =
+                          (playlist.currentTrack + 1) % playlist.tracks.length
+                        this.setCurrentTrack(nextIndex)
+                      }}
+                    >
+                      <i class="fas fa-step-forward"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="h-1 bg-gray-200 rounded-full mt-2">
+                  <div
+                    class="progress-bar h-full rounded-full"
+                    style="width: ${progressPercent}%"
+                  ></div>
+                </div>
+              </footer>
+            </div>
+          `
+        }
+      }
+
+      // Render the app
+      render(html`<${App} />`, document.getElementById('app'))
+    </script>
+  </body>
+</html>

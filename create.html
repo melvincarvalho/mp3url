@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nostr Playlist Creator</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Custom Styles -->
+    <style>
+      :root {
+        --primary: #6366f1;
+        --primary-dark: #4f46e5;
+        --secondary: #ec4899;
+        --accent: #06b6d4;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --error: #ef4444;
+        --dark: #0f172a;
+        --dark-light: #1e293b;
+        --gray: #64748b;
+        --gray-light: #94a3b8;
+        --white: #ffffff;
+        --glass: rgba(255, 255, 255, 0.1);
+        --glass-border: rgba(255, 255, 255, 0.2);
+        --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        --shadow-lg: 0 35px 60px -12px rgba(0, 0, 0, 0.3);
+        --blur: blur(16px);
+        --radius: 20px;
+        --radius-lg: 32px;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: linear-gradient(
+          135deg,
+          #0f172a 0%,
+          #1e293b 25%,
+          #334155 50%,
+          #475569 75%,
+          #64748b 100%
+        );
+        background-size: 400% 400%;
+        animation: gradientFlow 20s ease infinite;
+        min-height: 100vh;
+        color: var(--white);
+        overflow-x: hidden;
+      }
+
+      @keyframes gradientFlow {
+        0%,
+        100% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+      }
+
+      .app-container {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        padding: 2rem;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 3rem;
+      }
+
+      .header h1 {
+        font-size: clamp(2.5rem, 6vw, 4rem);
+        font-weight: 700;
+        margin-bottom: 1rem;
+        background: linear-gradient(
+          135deg,
+          #ffffff 0%,
+          #e2e8f0 50%,
+          #cbd5e1 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        letter-spacing: -0.02em;
+      }
+
+      .header p {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        font-weight: 400;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .main-content {
+        max-width: 800px;
+        margin: 0 auto;
+        width: 100%;
+      }
+
+      .auth-section {
+        background: var(--glass);
+        backdrop-filter: var(--blur);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow);
+      }
+
+      .auth-status {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .user-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: white;
+      }
+
+      .user-details h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+      }
+
+      .user-details p {
+        font-size: 0.9rem;
+        color: var(--gray-light);
+        font-family: 'JetBrains Mono', monospace;
+      }
+
+      .auth-button {
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(
+          135deg,
+          var(--primary),
+          var(--primary-dark)
+        );
+        border: none;
+        border-radius: var(--radius);
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+      }
+
+      .auth-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+      }
+
+      .auth-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .form-section {
+        background: var(--glass);
+        backdrop-filter: var(--blur);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow);
+      }
+
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+
+      .form-label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--white);
+      }
+
+      .form-input {
+        width: 100%;
+        padding: 1rem 1.5rem;
+        background: var(--glass);
+        backdrop-filter: var(--blur);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius);
+        color: var(--white);
+        font-size: 1rem;
+        transition: all 0.3s ease;
+      }
+
+      .form-input::placeholder {
+        color: var(--gray-light);
+      }
+
+      .form-input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+      }
+
+      .form-textarea {
+        min-height: 200px;
+        resize: vertical;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+
+      .tag-input-container {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .tag-input {
+        flex: 1;
+      }
+
+      .add-tag-btn {
+        padding: 0.5rem 1rem;
+        background: var(--accent);
+        border: none;
+        border-radius: var(--radius);
+        color: white;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .add-tag-btn:hover {
+        background: #0891b2;
+      }
+
+      .tags-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+      }
+
+      .tag-item {
+        background: var(--primary);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--radius);
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .tag-remove {
+        cursor: pointer;
+        font-weight: bold;
+        opacity: 0.7;
+        transition: opacity 0.2s ease;
+      }
+
+      .tag-remove:hover {
+        opacity: 1;
+      }
+
+      .relay-section {
+        margin-bottom: 1.5rem;
+      }
+
+      .relay-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+      }
+
+      .relay-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: var(--radius);
+        border: 1px solid var(--glass-border);
+      }
+
+      .relay-status-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--gray);
+      }
+
+      .relay-status-dot.connected {
+        background: var(--success);
+      }
+
+      .relay-status-dot.connecting {
+        background: var(--warning);
+        animation: pulse 1s infinite;
+      }
+
+      .relay-url {
+        flex: 1;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+      }
+
+      .submit-section {
+        text-align: center;
+      }
+
+      .submit-btn {
+        padding: 1rem 3rem;
+        background: linear-gradient(135deg, var(--success), #059669);
+        border: none;
+        border-radius: var(--radius);
+        color: white;
+        font-weight: 600;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+      }
+
+      .submit-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .status-message {
+        margin-top: 1rem;
+        padding: 1rem;
+        border-radius: var(--radius);
+        text-align: center;
+        font-weight: 500;
+      }
+
+      .status-success {
+        background: rgba(16, 185, 129, 0.2);
+        border: 1px solid var(--success);
+        color: var(--success);
+      }
+
+      .status-error {
+        background: rgba(239, 68, 68, 0.2);
+        border: 1px solid var(--error);
+        color: var(--error);
+      }
+
+      .status-info {
+        background: rgba(99, 102, 241, 0.2);
+        border: 1px solid var(--primary);
+        color: var(--primary);
+      }
+
+      .nevent-result {
+        background: var(--glass);
+        backdrop-filter: var(--blur);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        margin-top: 2rem;
+        box-shadow: var(--shadow);
+      }
+
+      .nevent-result h3 {
+        margin-bottom: 1rem;
+        color: var(--success);
+      }
+
+      .nevent-code {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 1rem;
+        border-radius: var(--radius);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        word-break: break-all;
+        margin-bottom: 1rem;
+        border: 1px solid var(--glass-border);
+      }
+
+      .copy-btn {
+        padding: 0.5rem 1rem;
+        background: var(--primary);
+        border: none;
+        border-radius: var(--radius);
+        color: white;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-right: 0.5rem;
+      }
+
+      .copy-btn:hover {
+        background: var(--primary-dark);
+      }
+
+      @media (max-width: 768px) {
+        .app-container {
+          padding: 1rem;
+        }
+
+        .form-row {
+          grid-template-columns: 1fr;
+        }
+
+        .auth-status {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .user-info {
+          justify-content: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <!-- Preact and HTM -->
+    <script type="module">
+      import { render, h } from 'https://esm.sh/preact@10.19.3'
+      import {
+        useState,
+        useEffect,
+        useRef
+      } from 'https://esm.sh/preact@10.19.3/hooks'
+      import htm from 'https://esm.sh/htm@3.1.1'
+
+      const html = htm.bind(h)
+
+      // Default relays
+      const DEFAULT_RELAYS = [
+        'wss://relay.damus.io',
+        'wss://nos.lol',
+        'wss://relay.nostr.band',
+        'wss://nostr.wine'
+      ]
+
+      // Nostr Client
+      class NostrClient {
+        constructor() {
+          this.relays = new Map()
+          this.listeners = []
+        }
+
+        addListener(callback) {
+          this.listeners.push(callback)
+        }
+
+        notifyListeners(type, data) {
+          this.listeners.forEach(callback => callback(type, data))
+        }
+
+        async connect(relayUrls = DEFAULT_RELAYS) {
+          for (const url of relayUrls) {
+            try {
+              const ws = new WebSocket(url)
+
+              ws.onopen = () => {
+                this.relays.set(url, { ws, status: 'connected' })
+                this.notifyListeners('relay', { url, status: 'connected' })
+              }
+
+              ws.onclose = () => {
+                this.relays.set(url, { ws: null, status: 'disconnected' })
+                this.notifyListeners('relay', { url, status: 'disconnected' })
+              }
+
+              ws.onerror = () => {
+                this.relays.set(url, { ws: null, status: 'error' })
+                this.notifyListeners('relay', { url, status: 'error' })
+              }
+
+              this.relays.set(url, { ws, status: 'connecting' })
+              this.notifyListeners('relay', { url, status: 'connecting' })
+            } catch (e) {
+              console.error(`Error connecting to ${url}:`, e)
+              this.relays.set(url, { ws: null, status: 'error' })
+              this.notifyListeners('relay', { url, status: 'error' })
+            }
+          }
+        }
+
+        async publishEvent(event) {
+          const connectedRelays = Array.from(this.relays.entries()).filter(
+            ([url, relay]) => relay.ws && relay.ws.readyState === WebSocket.OPEN
+          )
+
+          if (connectedRelays.length === 0) {
+            throw new Error('No connected relays')
+          }
+
+          const results = []
+          for (const [url, relay] of connectedRelays) {
+            try {
+              relay.ws.send(JSON.stringify(['EVENT', event]))
+              results.push({ url, success: true })
+            } catch (error) {
+              results.push({ url, success: false, error: error.message })
+            }
+          }
+
+          return results
+        }
+
+        disconnect() {
+          for (const [url, relay] of this.relays) {
+            if (relay.ws) {
+              relay.ws.close()
+            }
+          }
+          this.relays.clear()
+        }
+      }
+
+      const nostrClient = new NostrClient()
+
+      // Components
+      function AuthSection({ user, onSignIn, onSignOut }) {
+        const [isConnecting, setIsConnecting] = useState(false)
+
+        const handleSignIn = async () => {
+          setIsConnecting(true)
+          try {
+            await onSignIn()
+          } finally {
+            setIsConnecting(false)
+          }
+        }
+
+        return html`
+          <div class="auth-section">
+            <div class="auth-status">
+              ${user
+                ? html`
+                    <div class="user-info">
+                      <div class="user-avatar">
+                        ${user.name ? user.name[0].toUpperCase() : '👤'}
+                      </div>
+                      <div class="user-details">
+                        <h3>${user.name || 'Anonymous'}</h3>
+                        <p>${user.pubkey.slice(0, 16)}...</p>
+                      </div>
+                    </div>
+                    <button class="auth-button" onClick=${onSignOut}>
+                      Sign Out
+                    </button>
+                  `
+                : html`
+                    <div>
+                      <h3>Sign in with Nostr Extension</h3>
+                      <p>Connect your Nostr extension to publish playlists</p>
+                    </div>
+                    <button
+                      class="auth-button"
+                      onClick=${handleSignIn}
+                      disabled=${isConnecting}
+                    >
+                      ${isConnecting ? 'Connecting...' : 'Sign In'}
+                    </button>
+                  `}
+            </div>
+          </div>
+        `
+      }
+
+      function RelayStatus({ relays }) {
+        return html`
+          <div class="relay-section">
+            <label class="form-label">Relay Status</label>
+            <div class="relay-list">
+              ${Object.entries(relays).map(
+                ([url, status]) => html`
+                  <div class="relay-item" key=${url}>
+                    <div class="relay-status-dot ${status}"></div>
+                    <div class="relay-url">${url}</div>
+                  </div>
+                `
+              )}
+            </div>
+          </div>
+        `
+      }
+
+      function PlaylistForm({
+        user,
+        relayStatus,
+        onSubmit,
+        isSubmitting,
+        statusMessage
+      }) {
+        const [formData, setFormData] = useState({
+          title: '',
+          description: '',
+          content: '',
+          tags: []
+        })
+        const [newTag, setNewTag] = useState('')
+
+        const handleInputChange = (field, value) => {
+          setFormData(prev => ({ ...prev, [field]: value }))
+        }
+
+        const addTag = () => {
+          if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
+            setFormData(prev => ({
+              ...prev,
+              tags: [...prev.tags, newTag.trim()]
+            }))
+            setNewTag('')
+          }
+        }
+
+        const removeTag = tagToRemove => {
+          setFormData(prev => ({
+            ...prev,
+            tags: prev.tags.filter(tag => tag !== tagToRemove)
+          }))
+        }
+
+        const handleSubmit = e => {
+          e.preventDefault()
+          if (!user) {
+            alert('Please sign in first')
+            return
+          }
+          if (!formData.content.trim()) {
+            alert('Please enter playlist content')
+            return
+          }
+          onSubmit(formData)
+        }
+
+        const exampleM3U = `#EXTM3U
+#EXTINF:180,Artist Name - Song Title
+https://example.com/song1.mp3
+#EXTINF:240,Another Artist - Another Song
+https://example.com/song2.mp3`
+
+        return html`
+          <form class="form-section" onSubmit=${handleSubmit}>
+            <h2 style="margin-bottom: 1.5rem; color: var(--white);">
+              Create M3U Playlist
+            </h2>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Playlist Title</label>
+                <input
+                  type="text"
+                  class="form-input"
+                  placeholder="My Awesome Playlist"
+                  value=${formData.title}
+                  onInput=${e => handleInputChange('title', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Description</label>
+                <input
+                  type="text"
+                  class="form-input"
+                  placeholder="A collection of my favorite tracks"
+                  value=${formData.description}
+                  onInput=${e =>
+                    handleInputChange('description', e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Tags</label>
+              <div class="tag-input-container">
+                <input
+                  type="text"
+                  class="form-input tag-input"
+                  placeholder="Add a tag (e.g., rock, jazz, chill)"
+                  value=${newTag}
+                  onInput=${e => setNewTag(e.target.value)}
+                  onKeyPress=${e =>
+                    e.key === 'Enter' && (e.preventDefault(), addTag())}
+                />
+                <button type="button" class="add-tag-btn" onClick=${addTag}>
+                  Add
+                </button>
+              </div>
+              ${formData.tags.length > 0 &&
+              html`
+                <div class="tags-list">
+                  ${formData.tags.map(
+                    tag => html`
+                      <div class="tag-item" key=${tag}>
+                        ${tag}
+                        <span
+                          class="tag-remove"
+                          onClick=${() => removeTag(tag)}
+                        >
+                          ×
+                        </span>
+                      </div>
+                    `
+                  )}
+                </div>
+              `}
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                M3U Playlist Content
+                <span style="font-weight: 400; opacity: 0.7;">
+                  (Paste your M3U content below)
+                </span>
+              </label>
+              <textarea
+                class="form-input form-textarea"
+                placeholder=${exampleM3U}
+                value=${formData.content}
+                onInput=${e => handleInputChange('content', e.target.value)}
+                required
+              ></textarea>
+            </div>
+
+            <${RelayStatus} relays=${relayStatus} />
+
+            <div class="submit-section">
+              <button
+                type="submit"
+                class="submit-btn"
+                disabled=${isSubmitting || !user}
+              >
+                ${isSubmitting ? 'Publishing...' : 'Publish Playlist'}
+              </button>
+
+              ${statusMessage &&
+              html`
+                <div
+                  class="status-message ${statusMessage.type === 'success'
+                    ? 'status-success'
+                    : statusMessage.type === 'error'
+                    ? 'status-error'
+                    : 'status-info'}"
+                >
+                  ${statusMessage.text}
+                </div>
+              `}
+            </div>
+          </form>
+        `
+      }
+
+      function NeventResult({ nevent, eventId, relays }) {
+        const [copied, setCopied] = useState(false)
+
+        const copyToClipboard = text => {
+          navigator.clipboard.writeText(text).then(() => {
+            setCopied(true)
+            setTimeout(() => setCopied(false), 2000)
+          })
+        }
+
+        const viewerUrl = `${window.location.origin}/?nevent=${nevent}`
+
+        return html`
+          <div class="nevent-result">
+            <h3>✅ Playlist Published Successfully!</h3>
+
+            <div style="margin-bottom: 1rem;">
+              <strong>Event ID:</strong>
+              <div class="nevent-code">${eventId}</div>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+              <strong>Nevent:</strong>
+              <div class="nevent-code">${nevent}</div>
+              <button class="copy-btn" onClick=${() => copyToClipboard(nevent)}>
+                ${copied ? 'Copied!' : 'Copy Nevent'}
+              </button>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+              <strong>View Playlist:</strong>
+              <div class="nevent-code">${viewerUrl}</div>
+              <button
+                class="copy-btn"
+                onClick=${() => copyToClipboard(viewerUrl)}
+              >
+                Copy Link
+              </button>
+              <button
+                class="copy-btn"
+                onClick=${() => window.open(viewerUrl, '_blank')}
+              >
+                Open Viewer
+              </button>
+            </div>
+
+            <p style="opacity: 0.8; margin-top: 1rem;">
+              Share the nevent or viewer link to let others access your
+              playlist!
+            </p>
+          </div>
+        `
+      }
+
+      function App() {
+        const [user, setUser] = useState(null)
+        const [relayStatus, setRelayStatus] = useState({})
+        const [isSubmitting, setIsSubmitting] = useState(false)
+        const [statusMessage, setStatusMessage] = useState(null)
+        const [publishedEvent, setPublishedEvent] = useState(null)
+
+        useEffect(() => {
+          // Connect to relays
+          nostrClient.connect()
+
+          // Listen for relay status updates
+          nostrClient.addListener((type, data) => {
+            if (type === 'relay') {
+              setRelayStatus(prev => ({
+                ...prev,
+                [data.url]: data.status
+              }))
+            }
+          })
+
+          return () => {
+            nostrClient.disconnect()
+          }
+        }, [])
+
+        const signIn = async () => {
+          try {
+            if (!window.nostr) {
+              throw new Error(
+                'Nostr extension not found. Please install a Nostr extension like Alby or nos2x.'
+              )
+            }
+
+            const pubkey = await window.nostr.getPublicKey()
+            let profile = null
+
+            try {
+              // Try to get profile information
+              profile = await window.nostr.getProfile?.()
+            } catch (e) {
+              console.log('Profile not available')
+            }
+
+            setUser({
+              pubkey,
+              name: profile?.name || profile?.display_name,
+              picture: profile?.picture
+            })
+
+            setStatusMessage({
+              type: 'success',
+              text: 'Successfully signed in!'
+            })
+          } catch (error) {
+            setStatusMessage({
+              type: 'error',
+              text: error.message
+            })
+          }
+        }
+
+        const signOut = () => {
+          setUser(null)
+          setPublishedEvent(null)
+          setStatusMessage(null)
+        }
+
+        const publishPlaylist = async formData => {
+          setIsSubmitting(true)
+          setStatusMessage(null)
+
+          try {
+            if (!window.nostr) {
+              throw new Error('Nostr extension not available')
+            }
+
+            // Create event according to NIP-XX
+            const event = {
+              kind: 30313, // M3U Playlist Event
+              content: formData.content,
+              tags: [
+                ['d', formData.title], // descriptor tag
+                ['alt', formData.description || 'M3U playlist'], // alt tag
+                ...formData.tags.map(tag => ['t', tag]) // topic tags
+              ],
+              created_at: Math.floor(Date.now() / 1000),
+              pubkey: user.pubkey
+            }
+
+            // Sign the event
+            const signedEvent = await window.nostr.signEvent(event)
+
+            // Ensure the event has an ID
+            if (!signedEvent.id) {
+              throw new Error('Event signing failed - no event ID generated')
+            }
+
+            console.log('Signed event:', signedEvent)
+
+            // Publish to relays
+            const results = await nostrClient.publishEvent(signedEvent)
+
+            const successCount = results.filter(r => r.success).length
+            const totalCount = results.length
+
+            if (successCount === 0) {
+              throw new Error('Failed to publish to any relays')
+            }
+
+            // Create nevent
+            const connectedRelayUrls = Object.entries(relayStatus)
+              .filter(([url, status]) => status === 'connected')
+              .map(([url]) => url)
+
+            console.log('Creating nevent with:', {
+              eventId: signedEvent.id,
+              relays: connectedRelayUrls,
+              author: signedEvent.pubkey
+            })
+
+            const nevent = generateNevent(
+              signedEvent.id,
+              connectedRelayUrls,
+              signedEvent.pubkey
+            )
+
+            console.log('Generated nevent:', nevent)
+
+            setPublishedEvent({
+              eventId: signedEvent.id,
+              nevent,
+              relays: connectedRelayUrls
+            })
+
+            setStatusMessage({
+              type: 'success',
+              text: `Published to ${successCount}/${totalCount} relays`
+            })
+          } catch (error) {
+            console.error('Error publishing playlist:', error)
+            setStatusMessage({
+              type: 'error',
+              text: error.message
+            })
+          } finally {
+            setIsSubmitting(false)
+          }
+        }
+
+        return html`
+          <div class="app-container">
+            <div class="header">
+              <h1>Nostr Playlist Creator</h1>
+              <p>Create and share M3U playlists on Nostr</p>
+              <button
+                onClick=${() => testNeventGeneration()}
+                style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--accent); border: none; border-radius: var(--radius); color: white; cursor: pointer;"
+              >
+                Test Nevent Generation
+              </button>
+            </div>
+
+            <div class="main-content">
+              <${AuthSection}
+                user=${user}
+                onSignIn=${signIn}
+                onSignOut=${signOut}
+              />
+
+              ${user &&
+              html`
+                <${PlaylistForm}
+                  user=${user}
+                  relayStatus=${relayStatus}
+                  onSubmit=${publishPlaylist}
+                  isSubmitting=${isSubmitting}
+                  statusMessage=${statusMessage}
+                />
+              `}
+              ${publishedEvent &&
+              html`
+                <${NeventResult}
+                  nevent=${publishedEvent.nevent}
+                  eventId=${publishedEvent.eventId}
+                  relays=${publishedEvent.relays}
+                />
+              `}
+            </div>
+          </div>
+        `
+      }
+
+      render(h(App), document.getElementById('app'))
+    </script>
+
+    <!-- Nostr Tools -->
+    <script type="module">
+      // Import nostr-tools functions with correct syntax
+      import * as nip19 from 'https://esm.sh/nostr-tools@2.13.1/nip19'
+      import {
+        generateSecretKey,
+        getPublicKey,
+        finalizeEvent
+      } from 'https://esm.sh/nostr-tools@2.13.1/pure'
+
+      // Make functions globally available
+      window.nostrTools = {
+        nip19,
+        generateSecretKey,
+        getPublicKey,
+        finalizeEvent
+      }
+
+      // Global functions for nevent handling
+      window.generateNevent = function (eventId, relays = [], author = null) {
+        try {
+          const data = { id: eventId }
+          if (relays.length > 0) data.relays = relays
+          if (author) data.author = author
+          return nip19.neventEncode(data)
+        } catch (error) {
+          console.error('Error generating nevent:', error)
+          return null
+        }
+      }
+
+      window.decodeNevent = function (nevent) {
+        try {
+          const decoded = nip19.decode(nevent)
+          if (decoded.type === 'nevent') {
+            return {
+              id: decoded.data.id,
+              relays: decoded.data.relays || [],
+              author: decoded.data.author || null
+            }
+          }
+          return null
+        } catch (error) {
+          console.error('Error decoding nevent:', error)
+          return null
+        }
+      }
+    </script>
+
+    <script>
+      // Test function for nevent generation
+      function testNeventGeneration() {
+        const testEventId = 'a'.repeat(64) // 64 character hex string
+        const testRelays = ['wss://relay.damus.io']
+        const testAuthor = 'b'.repeat(64) // 64 character hex string
+
+        console.log('Testing nevent generation...')
+        console.log('Input:', { testEventId, testRelays, testAuthor })
+
+        const nevent = generateNevent(testEventId, testRelays, testAuthor)
+        console.log('Generated nevent:', nevent)
+
+        // Test if we can decode it back
+        const decoded = decodeNevent(nevent)
+        console.log('Decoded result:', decoded)
+
+        // Test the specific failing nevent
+        console.log('\n--- Testing specific failing nevent ---')
+        const failingNevent =
+          'nevent1qqstmyxf0e6kr5h093zenyns4nycjpky7c7j98yzhfkjxewx0qrjtlspp4mhxue69uhkummn9ekx7mqpzemhxue69uhhyetvv9ujumn0wd68ytnzv9hxgqgswaehxw309ahx7um5wgh8w6twv5q3gamnwvaz7tmjv4kxz7fwv3sk6atn9e5k7q3q6qjjgnn3skd5ntvf0mexh6mwp0fwmm4td98tz5aj2nwp4c30p9ksayjxah'
+        console.log('Failing nevent:', failingNevent)
+        const decodedFailing = decodeNevent(failingNevent)
+        console.log('Decoded failing nevent:', decodedFailing)
+
+        return nevent
+      }
+    </script>
+  </body>
+</html>
