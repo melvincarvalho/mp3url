@@ -705,6 +705,94 @@
           font-size: 1.5rem;
         }
       }
+
+      /* Video Player Modal */
+      .video-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.95);
+        backdrop-filter: var(--blur);
+        z-index: 2000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
+
+      .video-modal.active {
+        display: flex;
+      }
+
+      .video-container {
+        position: relative;
+        max-width: 90vw;
+        max-height: 90vh;
+        background: var(--dark);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-lg);
+      }
+
+      .video-player {
+        width: 100%;
+        height: auto;
+        max-height: 80vh;
+        display: block;
+      }
+
+      .video-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        width: 48px;
+        height: 48px;
+        background: rgba(0, 0, 0, 0.8);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: white;
+        font-size: 1.5rem;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        z-index: 10;
+      }
+
+      .video-close:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.6);
+        transform: scale(1.1);
+      }
+
+      .video-info {
+        padding: 1.5rem;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.05) 0%,
+          rgba(255, 255, 255, 0.02) 100%
+        );
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .video-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: white;
+      }
+
+      .video-url {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.875rem;
+        color: var(--gray-light);
+        word-break: break-all;
+        opacity: 0.8;
+      }
     </style>
   </head>
   <body>
@@ -1297,6 +1385,58 @@
         `
       }
 
+      function VideoPlayer({ currentVideo, onClose }) {
+        if (!currentVideo) return null
+
+        const handleBackdropClick = e => {
+          if (e.target === e.currentTarget) {
+            onClose()
+          }
+        }
+
+        const handleKeyPress = e => {
+          if (e.key === 'Escape') {
+            onClose()
+          }
+        }
+
+        useEffect(() => {
+          if (currentVideo) {
+            document.addEventListener('keydown', handleKeyPress)
+            document.body.style.overflow = 'hidden'
+          } else {
+            document.body.style.overflow = 'auto'
+          }
+
+          return () => {
+            document.removeEventListener('keydown', handleKeyPress)
+            document.body.style.overflow = 'auto'
+          }
+        }, [currentVideo])
+
+        return html`
+          <div
+            class="video-modal ${currentVideo ? 'active' : ''}"
+            onClick=${handleBackdropClick}
+          >
+            <div class="video-container">
+              <div class="video-close" onClick=${onClose}>×</div>
+              <video
+                class="video-player"
+                src=${currentVideo.url}
+                controls
+                autoplay
+                preload="metadata"
+              />
+              <div class="video-info">
+                <div class="video-title">${currentVideo.title}</div>
+                <div class="video-url">${currentVideo.url}</div>
+              </div>
+            </div>
+          </div>
+        `
+      }
+
       function RelayStatus({ relays }) {
         return html`
           <div class="relay-status">
@@ -1322,6 +1462,7 @@
           currentTrack: null,
           isPlaying: false
         })
+        const [currentVideo, setCurrentVideo] = useState(null)
         const swiperRef = useRef(null)
 
         useEffect(() => {
@@ -1476,11 +1617,17 @@
         }
 
         const handleMediaClick = track => {
-          if (track.mediaType === 'image' || track.mediaType === 'video') {
+          if (track.mediaType === 'image') {
             window.open(track.url, '_blank')
+          } else if (track.mediaType === 'video') {
+            setCurrentVideo(track)
           } else {
             audioManager.play(track)
           }
+        }
+
+        const handleCloseVideo = () => {
+          setCurrentVideo(null)
         }
 
         const audioCount = tracks.filter(t => t.mediaType === 'audio').length
@@ -1564,6 +1711,16 @@
               `}
             </div>
           </div>
+
+          <${AudioPlayer}
+            currentTrack=${audioState.currentTrack}
+            isPlaying=${audioState.isPlaying}
+          />
+
+          <${VideoPlayer}
+            currentVideo=${currentVideo}
+            onClose=${handleCloseVideo}
+          />
         `
       }
 
