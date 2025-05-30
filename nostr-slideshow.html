@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nostr Slideshow</title>
+
+    <!-- Swiper CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"
+    />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Custom Styles -->
+    <style>
+      :root {
+        --primary: #6366f1;
+        --primary-dark: #4f46e5;
+        --secondary: #ec4899;
+        --accent: #06b6d4;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --error: #ef4444;
+        --dark: #0f172a;
+        --dark-light: #1e293b;
+        --gray: #64748b;
+        --gray-light: #94a3b8;
+        --white: #ffffff;
+        --glass: rgba(255, 255, 255, 0.1);
+        --glass-border: rgba(255, 255, 255, 0.2);
+        --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        --shadow-lg: 0 35px 60px -12px rgba(0, 0, 0, 0.3);
+        --blur: blur(16px);
+        --radius: 20px;
+        --radius-lg: 32px;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: linear-gradient(
+          135deg,
+          #0f172a 0%,
+          #1e293b 25%,
+          #334155 50%,
+          #475569 75%,
+          #64748b 100%
+        );
+        background-size: 400% 400%;
+        animation: gradientFlow 20s ease infinite;
+        min-height: 100vh;
+        color: var(--white);
+        overflow-x: hidden;
+      }
+
+      @keyframes gradientFlow {
+        0%,
+        100% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+      }
+
+      .app-container {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+
+      /* Header */
+      .header {
+        text-align: center;
+        padding: 3rem 2rem 2rem;
+        position: relative;
+        z-index: 10;
+      }
+
+      .header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          180deg,
+          rgba(0, 0, 0, 0.3) 0%,
+          transparent 100%
+        );
+        backdrop-filter: var(--blur);
+        z-index: -1;
+      }
+
+      .header h1 {
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        font-weight: 700;
+        margin-bottom: 1rem;
+        background: linear-gradient(
+          135deg,
+          #ffffff 0%,
+          #e2e8f0 50%,
+          #cbd5e1 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        letter-spacing: -0.02em;
+      }
+
+      .header p {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        font-weight: 400;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .input-section {
+        max-width: 600px;
+        margin: 2rem auto 0;
+        padding: 0 1rem;
+      }
+
+      .input-container {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .nevent-input {
+        flex: 1;
+        padding: 1rem 1.5rem;
+        background: var(--glass);
+        backdrop-filter: var(--blur);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius);
+        color: var(--white);
+        font-size: 1rem;
+        font-family: 'JetBrains Mono', monospace;
+        transition: all 0.3s ease;
+      }
+
+      .nevent-input::placeholder {
+        color: var(--gray-light);
+      }
+
+      .nevent-input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+      }
+
+      .load-btn {
+        padding: 1rem 2rem;
+        background: linear-gradient(
+          135deg,
+          var(--primary),
+          var(--primary-dark)
+        );
+        border: none;
+        border-radius: var(--radius);
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+      }
+
+      .load-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+      }
+
+      .load-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .relay-status {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .relay-item {
+        background: var(--glass);
+        backdrop-filter: var(--blur);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius);
+        padding: 0.5rem 1rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .relay-status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--gray);
+      }
+
+      .relay-status-dot.connected {
+        background: var(--success);
+      }
+
+      .relay-status-dot.connecting {
+        background: var(--warning);
+        animation: pulse 1s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .stats {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        margin-top: 1.5rem;
+        flex-wrap: wrap;
+      }
+
+      .stat-item {
+        background: var(--glass);
+        backdrop-filter: var(--blur);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius);
+        padding: 0.75rem 1.5rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+
+      /* Main Content */
+      .main-content {
+        flex: 1;
+        padding: 2rem 0;
+        position: relative;
+      }
+
+      /* Swiper Styles */
+      .swiper {
+        width: 100%;
+        height: 600px;
+        padding: 2rem 0;
+      }
+
+      .swiper-slide {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 0 1rem;
+      }
+
+      .media-card {
+        width: 100%;
+        max-width: 400px;
+        background: var(--glass);
+        backdrop-filter: var(--blur);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        position: relative;
+      }
+
+      .media-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: var(--shadow-lg);
+        border-color: rgba(255, 255, 255, 0.3);
+      }
+
+      .media-preview {
+        width: 100%;
+        height: 280px;
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+      }
+
+      .media-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.4s ease;
+      }
+
+      .media-card:hover .media-preview img {
+        transform: scale(1.05);
+      }
+
+      .media-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(99, 102, 241, 0.8) 0%,
+          rgba(236, 72, 153, 0.8) 100%
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: all 0.3s ease;
+      }
+
+      .media-card:hover .media-overlay {
+        opacity: 1;
+      }
+
+      .play-button {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: var(--primary);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        transform: scale(0.8);
+        transition: all 0.3s ease;
+      }
+
+      .media-card:hover .play-button {
+        transform: scale(1);
+      }
+
+      .media-type-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: var(--radius);
+        font-size: 0.75rem;
+        font-weight: 600;
+        backdrop-filter: var(--blur);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .audio-badge {
+        background: linear-gradient(
+          135deg,
+          var(--primary),
+          var(--primary-dark)
+        );
+        color: white;
+      }
+
+      .image-badge {
+        background: linear-gradient(135deg, var(--success), #059669);
+        color: white;
+      }
+
+      .media-info {
+        padding: 2rem;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.05) 0%,
+          rgba(255, 255, 255, 0.02) 100%
+        );
+      }
+
+      .media-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .media-artist {
+        color: var(--gray-light);
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
+        font-weight: 400;
+      }
+
+      .media-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .duration-badge {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .action-btn {
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 1rem;
+      }
+
+      .action-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.4);
+        transform: scale(1.1);
+      }
+
+      /* Audio Player */
+      .audio-player {
+        position: fixed;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--glass);
+        backdrop-filter: var(--blur);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem 2rem;
+        box-shadow: var(--shadow-lg);
+        display: none;
+        align-items: center;
+        gap: 1.5rem;
+        z-index: 1000;
+        min-width: 350px;
+        max-width: 90vw;
+      }
+
+      .audio-player.active {
+        display: flex;
+      }
+
+      .player-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .player-btn {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(
+          135deg,
+          var(--primary),
+          var(--primary-dark)
+        );
+        border: none;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        color: white;
+        font-size: 1.2rem;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+      }
+
+      .player-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+      }
+
+      .player-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .player-title {
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .player-artist {
+        font-size: 0.875rem;
+        color: var(--gray-light);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* Loading & Error States */
+      .loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 400px;
+        flex-direction: column;
+        gap: 2rem;
+      }
+
+      .spinner {
+        width: 60px;
+        height: 60px;
+        border: 3px solid rgba(255, 255, 255, 0.2);
+        border-top: 3px solid var(--primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .loading-text {
+        font-size: 1.2rem;
+        font-weight: 500;
+        opacity: 0.9;
+      }
+
+      .error {
+        background: var(--glass);
+        backdrop-filter: var(--blur);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: var(--radius-lg);
+        padding: 3rem;
+        text-align: center;
+        max-width: 600px;
+        margin: 2rem auto;
+        box-shadow: var(--shadow);
+      }
+
+      .error h2 {
+        color: var(--error);
+        margin-bottom: 1rem;
+        font-weight: 600;
+      }
+
+      .error p {
+        opacity: 0.9;
+        line-height: 1.6;
+      }
+
+      /* Swiper Navigation */
+      .swiper-button-next,
+      .swiper-button-prev {
+        background: var(--glass);
+        backdrop-filter: var(--blur);
+        border: 1px solid var(--glass-border);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        margin-top: -25px;
+        color: white;
+        transition: all 0.3s ease;
+      }
+
+      .swiper-button-next:hover,
+      .swiper-button-prev:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.4);
+        transform: scale(1.1);
+      }
+
+      .swiper-button-next::after,
+      .swiper-button-prev::after {
+        font-size: 1.2rem;
+        font-weight: 600;
+      }
+
+      /* Swiper Pagination */
+      .swiper-pagination-bullet {
+        background: rgba(255, 255, 255, 0.3);
+        opacity: 1;
+        transition: all 0.3s ease;
+      }
+
+      .swiper-pagination-bullet-active {
+        background: var(--primary);
+        transform: scale(1.2);
+      }
+
+      /* Responsive Design */
+      @media (max-width: 768px) {
+        .header {
+          padding: 2rem 1rem 1rem;
+        }
+
+        .header h1 {
+          font-size: 2.5rem;
+        }
+
+        .input-container {
+          flex-direction: column;
+        }
+
+        .stats {
+          gap: 1rem;
+        }
+
+        .stat-item {
+          padding: 0.5rem 1rem;
+          font-size: 0.8rem;
+        }
+
+        .swiper {
+          height: 550px;
+          padding: 1rem 0;
+        }
+
+        .media-card {
+          max-width: 320px;
+        }
+
+        .media-preview {
+          height: 240px;
+        }
+
+        .media-info {
+          padding: 1.5rem;
+        }
+
+        .audio-player {
+          left: 1rem;
+          right: 1rem;
+          transform: none;
+          min-width: auto;
+          padding: 1rem 1.5rem;
+        }
+
+        .swiper-button-next,
+        .swiper-button-prev {
+          display: none;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .media-card {
+          max-width: 280px;
+        }
+
+        .media-preview {
+          height: 200px;
+        }
+
+        .play-button {
+          width: 60px;
+          height: 60px;
+          font-size: 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <!-- Swiper JS -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+    <!-- Nostr Tools -->
+    <script type="module">
+      // Import nostr-tools with correct syntax
+      import * as nip19 from 'https://esm.sh/nostr-tools@2.13.1/nip19'
+
+      // Make decode function globally available
+      window.decodeNevent = function (nevent) {
+        try {
+          const decoded = nip19.decode(nevent)
+          if (decoded.type === 'nevent') {
+            return {
+              id: decoded.data.id,
+              relays: decoded.data.relays || [],
+              author: decoded.data.author || null
+            }
+          }
+          return null
+        } catch (error) {
+          console.error('Error decoding nevent:', error)
+          return null
+        }
+      }
+    </script>
+
+    <script type="module">
+      // Preact and HTM
+      import { render, h } from 'https://esm.sh/preact@10.19.3'
+      import {
+        useState,
+        useEffect,
+        useRef
+      } from 'https://esm.sh/preact@10.19.3/hooks'
+      import htm from 'https://esm.sh/htm@3.1.1'
+
+      const html = htm.bind(h)
+
+      // Default relays
+      const DEFAULT_RELAYS = [
+        'wss://relay.damus.io',
+        'wss://nos.lol',
+        'wss://relay.nostr.band',
+        'wss://nostr.wine'
+      ]
+
+      // Nostr Client
+      class NostrClient {
+        constructor() {
+          this.relays = new Map()
+          this.subscriptions = new Map()
+          this.listeners = []
+        }
+
+        addListener(callback) {
+          this.listeners.push(callback)
+        }
+
+        notifyListeners(type, data) {
+          this.listeners.forEach(callback => callback(type, data))
+        }
+
+        async connect(relayUrls) {
+          const connectionPromises = []
+
+          for (const url of relayUrls) {
+            if (!this.relays.has(url)) {
+              const promise = new Promise(resolve => {
+                try {
+                  console.log(`Connecting to relay: ${url}`)
+                  const ws = new WebSocket(url)
+
+                  const connectionTimeout = setTimeout(() => {
+                    console.log(`Connection timeout for ${url}`)
+                    this.relays.set(url, { ws: null, status: 'timeout' })
+                    this.notifyListeners('relay', { url, status: 'timeout' })
+                    resolve(false)
+                  }, 5000)
+
+                  ws.onopen = () => {
+                    clearTimeout(connectionTimeout)
+                    console.log(`Connected to relay: ${url}`)
+                    this.relays.set(url, { ws, status: 'connected' })
+                    this.notifyListeners('relay', { url, status: 'connected' })
+                    resolve(true)
+                  }
+
+                  ws.onmessage = event => {
+                    try {
+                      const message = JSON.parse(event.data)
+                      this.handleMessage(message)
+                    } catch (e) {
+                      console.error(`Error parsing message from ${url}:`, e)
+                    }
+                  }
+
+                  ws.onclose = () => {
+                    console.log(`Disconnected from relay: ${url}`)
+                    this.relays.set(url, { ws: null, status: 'disconnected' })
+                    this.notifyListeners('relay', {
+                      url,
+                      status: 'disconnected'
+                    })
+                  }
+
+                  ws.onerror = error => {
+                    clearTimeout(connectionTimeout)
+                    console.error(`Error connecting to ${url}:`, error)
+                    this.relays.set(url, { ws: null, status: 'error' })
+                    this.notifyListeners('relay', { url, status: 'error' })
+                    resolve(false)
+                  }
+
+                  this.relays.set(url, { ws, status: 'connecting' })
+                  this.notifyListeners('relay', { url, status: 'connecting' })
+                } catch (e) {
+                  console.error(`Error connecting to ${url}:`, e)
+                  this.relays.set(url, { ws: null, status: 'error' })
+                  this.notifyListeners('relay', { url, status: 'error' })
+                  resolve(false)
+                }
+              })
+
+              connectionPromises.push(promise)
+            } else {
+              const relay = this.relays.get(url)
+              if (relay.status === 'connected') {
+                console.log(`Already connected to ${url}`)
+              } else {
+                console.log(
+                  `Relay ${url} exists but not connected (status: ${relay.status})`
+                )
+              }
+            }
+          }
+
+          if (connectionPromises.length > 0) {
+            const results = await Promise.all(connectionPromises)
+            const successCount = results.filter(Boolean).length
+            console.log(
+              `Connected to ${successCount}/${connectionPromises.length} new relays`
+            )
+          }
+        }
+
+        handleMessage(message) {
+          const [type, subId, event] = message
+
+          if (type === 'EVENT' && event) {
+            this.notifyListeners('event', event)
+          }
+        }
+
+        async fetchEvent(eventId, relayUrls = []) {
+          return new Promise((resolve, reject) => {
+            const subId = 'fetch_' + Math.random().toString(36).substr(2, 9)
+            const filter = { ids: [eventId] }
+
+            let resolved = false
+            const timeout = setTimeout(() => {
+              if (!resolved) {
+                resolved = true
+                console.log(
+                  `Timeout fetching event ${eventId} after 15 seconds`
+                )
+                reject(new Error('Timeout fetching event after 15 seconds'))
+              }
+            }, 15000) // Increased timeout to 15 seconds
+
+            const listener = (type, data) => {
+              if (type === 'event' && data.id === eventId && !resolved) {
+                resolved = true
+                clearTimeout(timeout)
+                console.log(`Successfully fetched event ${eventId}`)
+                resolve(data)
+              }
+            }
+
+            this.addListener(listener)
+
+            // Use specific relays if provided, otherwise use all connected relays
+            const targetRelays =
+              relayUrls.length > 0 ? relayUrls : Array.from(this.relays.keys())
+
+            console.log(
+              `Requesting event ${eventId} from relays:`,
+              targetRelays
+            )
+
+            let requestsSent = 0
+            for (const url of targetRelays) {
+              const relay = this.relays.get(url)
+              if (relay && relay.ws && relay.ws.readyState === WebSocket.OPEN) {
+                relay.ws.send(JSON.stringify(['REQ', subId, filter]))
+                requestsSent++
+                console.log(`Sent request to ${url}`)
+              } else {
+                console.log(`Relay ${url} not connected or ready`)
+              }
+            }
+
+            if (requestsSent === 0) {
+              resolved = true
+              clearTimeout(timeout)
+              reject(new Error('No connected relays available to fetch event'))
+            }
+          })
+        }
+
+        disconnect() {
+          for (const [url, relay] of this.relays) {
+            if (relay.ws) {
+              relay.ws.close()
+            }
+          }
+          this.relays.clear()
+        }
+      }
+
+      // M3U Parser (same as before)
+      class M3UParser {
+        static async parse(content) {
+          const lines = content
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line)
+          const tracks = []
+          let currentTrack = {}
+          let imageCounter = 1
+
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i]
+
+            if (line.startsWith('#EXTINF:')) {
+              const match = line.match(/#EXTINF:([^,]*),(.*)$/)
+              if (match) {
+                currentTrack.duration = parseFloat(match[1]) || 0
+                currentTrack.title = match[2].trim()
+
+                const artistMatch =
+                  currentTrack.title.match(/^([^-]+)\s*-\s*(.+)$/)
+                if (artistMatch) {
+                  currentTrack.artist = artistMatch[1].trim()
+                  currentTrack.title = artistMatch[2].trim()
+                }
+              }
+            } else if (
+              line.startsWith('http') ||
+              line.startsWith('/') ||
+              line.startsWith('./')
+            ) {
+              currentTrack.url = line
+              currentTrack.id = tracks.length
+              currentTrack.mediaType = this.detectMediaType(line)
+
+              if (currentTrack.mediaType === 'image') {
+                currentTrack.image = line
+                if (!currentTrack.title || currentTrack.title.trim() === '') {
+                  currentTrack.title = `Image ${imageCounter}`
+                  imageCounter++
+                }
+                try {
+                  const dimensions = await this.getImageDimensions(line)
+                  currentTrack.width = dimensions.width
+                  currentTrack.height = dimensions.height
+                } catch (error) {
+                  currentTrack.width = 1200
+                  currentTrack.height = 800
+                }
+              } else {
+                currentTrack.image = this.generatePlaceholderImage(
+                  currentTrack.title || 'Unknown Track'
+                )
+                currentTrack.width = 400
+                currentTrack.height = 400
+              }
+
+              tracks.push({ ...currentTrack })
+              currentTrack = {}
+            }
+          }
+
+          return tracks
+        }
+
+        static detectMediaType(url) {
+          const audioExtensions = [
+            '.mp3',
+            '.wav',
+            '.ogg',
+            '.m4a',
+            '.aac',
+            '.flac',
+            '.wma'
+          ]
+          const imageExtensions = [
+            '.jpg',
+            '.jpeg',
+            '.png',
+            '.gif',
+            '.webp',
+            '.bmp',
+            '.svg'
+          ]
+          const urlLower = url.toLowerCase()
+
+          if (audioExtensions.some(ext => urlLower.includes(ext))) {
+            return 'audio'
+          } else if (imageExtensions.some(ext => urlLower.includes(ext))) {
+            return 'image'
+          }
+          return 'audio'
+        }
+
+        static getImageDimensions(url) {
+          return new Promise((resolve, reject) => {
+            const img = new Image()
+            img.onload = () =>
+              resolve({ width: img.naturalWidth, height: img.naturalHeight })
+            img.onerror = () => reject(new Error('Failed to load image'))
+            img.src = url
+          })
+        }
+
+        static generatePlaceholderImage(title) {
+          const canvas = document.createElement('canvas')
+          canvas.width = 400
+          canvas.height = 400
+          const ctx = canvas.getContext('2d')
+
+          const gradient = ctx.createLinearGradient(0, 0, 400, 400)
+          const colors = [
+            ['#6366f1', '#8b5cf6'],
+            ['#ec4899', '#f43f5e'],
+            ['#06b6d4', '#0891b2'],
+            ['#10b981', '#059669'],
+            ['#f59e0b', '#d97706'],
+            ['#8b5cf6', '#7c3aed']
+          ]
+          const colorPair =
+            colors[
+              Math.abs(
+                title.split('').reduce((a, b) => a + b.charCodeAt(0), 0)
+              ) % colors.length
+            ]
+          gradient.addColorStop(0, colorPair[0])
+          gradient.addColorStop(1, colorPair[1])
+
+          ctx.fillStyle = gradient
+          ctx.fillRect(0, 0, 400, 400)
+
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+          ctx.font = 'bold 120px Arial'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText('♪', 200, 200)
+
+          return canvas.toDataURL()
+        }
+      }
+
+      // Audio Manager (same as before)
+      class AudioManager {
+        constructor() {
+          this.audio = new Audio()
+          this.currentTrack = null
+          this.isPlaying = false
+          this.listeners = []
+
+          this.audio.addEventListener('ended', () => {
+            this.isPlaying = false
+            this.notifyListeners()
+          })
+
+          this.audio.addEventListener('play', () => {
+            this.isPlaying = true
+            this.notifyListeners()
+          })
+
+          this.audio.addEventListener('pause', () => {
+            this.isPlaying = false
+            this.notifyListeners()
+          })
+        }
+
+        play(track) {
+          if (this.currentTrack?.id === track.id && !this.audio.paused) {
+            this.pause()
+            return
+          }
+
+          this.currentTrack = track
+          this.audio.src = track.url
+          this.audio.play().catch(console.error)
+        }
+
+        pause() {
+          this.audio.pause()
+        }
+
+        stop() {
+          this.audio.pause()
+          this.audio.currentTime = 0
+          this.currentTrack = null
+          this.notifyListeners()
+        }
+
+        addListener(callback) {
+          this.listeners.push(callback)
+        }
+
+        notifyListeners() {
+          this.listeners.forEach(callback =>
+            callback({
+              currentTrack: this.currentTrack,
+              isPlaying: this.isPlaying
+            })
+          )
+        }
+      }
+
+      const audioManager = new AudioManager()
+      const nostrClient = new NostrClient()
+
+      // Components
+      function MediaCard({ track, onClick }) {
+        const handleClick = () => onClick(track)
+
+        const handlePlayClick = e => {
+          e.stopPropagation()
+          if (track.mediaType === 'audio') {
+            audioManager.play(track)
+          } else {
+            handleClick()
+          }
+        }
+
+        const formatDuration = seconds => {
+          const mins = Math.floor(seconds / 60)
+          const secs = Math.floor(seconds % 60)
+          return `${mins}:${secs.toString().padStart(2, '0')}`
+        }
+
+        const copyToClipboard = e => {
+          e.stopPropagation()
+          navigator.clipboard.writeText(track.url)
+        }
+
+        const openOriginal = e => {
+          e.stopPropagation()
+          window.open(track.url, '_blank')
+        }
+
+        return html`
+          <div class="media-card" onClick=${handleClick}>
+            <div class="media-preview">
+              <img src=${track.image} alt=${track.title} loading="lazy" />
+              <div class="media-overlay" onClick=${handlePlayClick}>
+                <div class="play-button">
+                  ${track.mediaType === 'image' ? '🔍' : '▶️'}
+                </div>
+              </div>
+              <div
+                class="media-type-badge ${track.mediaType === 'image'
+                  ? 'image-badge'
+                  : 'audio-badge'}"
+              >
+                ${track.mediaType === 'image' ? '📷 Image' : '🎵 Audio'}
+              </div>
+            </div>
+            <div class="media-info">
+              <h3 class="media-title">
+                ${track.title ||
+                (track.mediaType === 'image'
+                  ? `Image ${track.id + 1}`
+                  : 'Unknown Track')}
+              </h3>
+              <p class="media-artist">
+                ${track.artist ||
+                (track.mediaType === 'image' ? 'Image File' : 'Unknown Artist')}
+              </p>
+              <div class="media-meta">
+                ${track.duration > 0 && track.mediaType === 'audio'
+                  ? html`<div class="duration-badge">
+                      ${formatDuration(track.duration)}
+                    </div>`
+                  : html`<div class="duration-badge">${track.mediaType}</div>`}
+                <div class="action-buttons">
+                  <div
+                    class="action-btn"
+                    onClick=${copyToClipboard}
+                    title="Copy URL"
+                  >
+                    📋
+                  </div>
+                  <div
+                    class="action-btn"
+                    onClick=${openOriginal}
+                    title="Open Original"
+                  >
+                    🔗
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `
+      }
+
+      function AudioPlayer({ currentTrack, isPlaying }) {
+        if (!currentTrack) return null
+
+        return html`
+          <div class="audio-player active">
+            <div class="player-controls">
+              <button class="player-btn" onClick=${() => audioManager.pause()}>
+                ${isPlaying ? '⏸️' : '▶️'}
+              </button>
+              <button class="player-btn" onClick=${() => audioManager.stop()}>
+                ⏹️
+              </button>
+            </div>
+            <div class="player-info">
+              <div class="player-title">
+                ${currentTrack.title || 'Unknown Track'}
+              </div>
+              <div class="player-artist">
+                ${currentTrack.artist || 'Unknown Artist'}
+              </div>
+            </div>
+          </div>
+        `
+      }
+
+      function RelayStatus({ relays }) {
+        return html`
+          <div class="relay-status">
+            ${Object.entries(relays).map(
+              ([url, status]) => html`
+                <div class="relay-item" key=${url}>
+                  <div class="relay-status-dot ${status}"></div>
+                  <span>${url.replace('wss://', '')}</span>
+                </div>
+              `
+            )}
+          </div>
+        `
+      }
+
+      function App() {
+        const [tracks, setTracks] = useState([])
+        const [loading, setLoading] = useState(false)
+        const [error, setError] = useState(null)
+        const [neventInput, setNeventInput] = useState('')
+        const [relayStatus, setRelayStatus] = useState({})
+        const [audioState, setAudioState] = useState({
+          currentTrack: null,
+          isPlaying: false
+        })
+        const swiperRef = useRef(null)
+
+        useEffect(() => {
+          audioManager.addListener(setAudioState)
+
+          // Connect to default relays
+          nostrClient.connect(DEFAULT_RELAYS)
+
+          // Listen for relay status updates
+          nostrClient.addListener((type, data) => {
+            if (type === 'relay') {
+              setRelayStatus(prev => ({
+                ...prev,
+                [data.url]: data.status
+              }))
+            }
+          })
+
+          // Check for nevent in URL params
+          const urlParams = new URLSearchParams(window.location.search)
+          const neventParam = urlParams.get('nevent')
+          if (neventParam) {
+            setNeventInput(neventParam)
+            loadPlaylistFromNevent(neventParam)
+          }
+
+          return () => {
+            nostrClient.disconnect()
+          }
+        }, [])
+
+        useEffect(() => {
+          if (tracks.length > 0 && !swiperRef.current) {
+            // Initialize Swiper
+            swiperRef.current = new Swiper('.swiper', {
+              effect: 'coverflow',
+              grabCursor: true,
+              centeredSlides: true,
+              slidesPerView: 'auto',
+              coverflowEffect: {
+                rotate: 50,
+                stretch: 0,
+                depth: 100,
+                modifier: 1,
+                slideShadows: true
+              },
+              pagination: {
+                el: '.swiper-pagination',
+                clickable: true
+              },
+              navigation: {
+                nextEl: '.swiper-button-next',
+                prevEl: '.swiper-button-prev'
+              },
+              keyboard: {
+                enabled: true
+              },
+              mousewheel: {
+                thresholdDelta: 50
+              },
+              breakpoints: {
+                640: {
+                  slidesPerView: 1
+                },
+                768: {
+                  slidesPerView: 2
+                },
+                1024: {
+                  slidesPerView: 3
+                }
+              }
+            })
+          }
+        }, [tracks])
+
+        const loadPlaylistFromNevent = async nevent => {
+          try {
+            setLoading(true)
+            setError(null)
+
+            const decoded = window.decodeNevent(nevent)
+            if (!decoded || !decoded.id) {
+              throw new Error('Invalid nevent format')
+            }
+
+            // Ensure we're connected to the relays specified in the nevent
+            if (decoded.relays && decoded.relays.length > 0) {
+              console.log('Connecting to relays:', decoded.relays)
+              await nostrClient.connect(decoded.relays)
+
+              // Wait a bit for connections to establish
+              await new Promise(resolve => setTimeout(resolve, 2000))
+            }
+
+            console.log(
+              'Fetching event:',
+              decoded.id,
+              'from relays:',
+              decoded.relays
+            )
+
+            let event
+            try {
+              event = await nostrClient.fetchEvent(decoded.id, decoded.relays)
+            } catch (fetchError) {
+              console.error('First fetch attempt failed:', fetchError)
+
+              // Try with default relays if specific relays failed
+              console.log('Retrying with default relays...')
+              event = await nostrClient.fetchEvent(decoded.id, [])
+            }
+
+            if (!event) {
+              throw new Error(
+                'Event not found on any relays. The event may not exist or the relays may be offline.'
+              )
+            }
+
+            console.log('Found event:', event)
+
+            // Check if it's a playlist event (kind 30313 or contains M3U content)
+            if (event.kind !== 30313 && !event.content.includes('#EXTM3U')) {
+              throw new Error(
+                `Event does not contain M3U playlist data. Event kind: ${
+                  event.kind
+                }, content preview: ${event.content.substring(0, 100)}...`
+              )
+            }
+
+            const parsedTracks = await M3UParser.parse(event.content)
+
+            if (parsedTracks.length === 0) {
+              throw new Error('No tracks found in playlist')
+            }
+
+            console.log('Successfully loaded', parsedTracks.length, 'tracks')
+            setTracks(parsedTracks)
+          } catch (err) {
+            console.error('Error loading playlist from nevent:', err)
+            setError(err.message)
+          } finally {
+            setLoading(false)
+          }
+        }
+
+        const handleLoadPlaylist = () => {
+          if (!neventInput.trim()) {
+            setError('Please enter a nevent')
+            return
+          }
+          loadPlaylistFromNevent(neventInput.trim())
+        }
+
+        const handleMediaClick = track => {
+          if (track.mediaType === 'image') {
+            window.open(track.url, '_blank')
+          } else {
+            audioManager.play(track)
+          }
+        }
+
+        const audioCount = tracks.filter(t => t.mediaType === 'audio').length
+        const imageCount = tracks.filter(t => t.mediaType === 'image').length
+
+        return html`
+          <div class="app-container">
+            <div class="header">
+              <h1>Nostr Slideshow</h1>
+              <p>Load M3U playlists from Nostr events</p>
+
+              <div class="input-section">
+                <div class="input-container">
+                  <input
+                    type="text"
+                    class="nevent-input"
+                    placeholder="Enter nevent1... or paste from clipboard"
+                    value=${neventInput}
+                    onInput=${e => setNeventInput(e.target.value)}
+                    onKeyPress=${e => e.key === 'Enter' && handleLoadPlaylist()}
+                  />
+                  <button
+                    class="load-btn"
+                    onClick=${handleLoadPlaylist}
+                    disabled=${loading}
+                  >
+                    ${loading ? 'Loading...' : 'Load'}
+                  </button>
+                </div>
+
+                <${RelayStatus} relays=${relayStatus} />
+              </div>
+
+              ${tracks.length > 0 &&
+              html`
+                <div class="stats">
+                  <div class="stat-item">Total: ${tracks.length}</div>
+                  <div class="stat-item">Audio: ${audioCount}</div>
+                  <div class="stat-item">Images: ${imageCount}</div>
+                </div>
+              `}
+            </div>
+
+            <div class="main-content">
+              ${loading &&
+              html`
+                <div class="loading">
+                  <div class="spinner"></div>
+                  <div class="loading-text">Loading playlist from Nostr...</div>
+                </div>
+              `}
+              ${error &&
+              html`
+                <div class="error">
+                  <h2>Error Loading Playlist</h2>
+                  <p>${error}</p>
+                  <p style="margin-top: 1rem; opacity: 0.8;">
+                    Make sure the nevent is valid and the event contains M3U
+                    playlist data.
+                  </p>
+                </div>
+              `}
+              ${tracks.length > 0 &&
+              html`
+                <div class="swiper">
+                  <div class="swiper-wrapper">
+                    ${tracks.map(
+                      track => html`
+                        <div class="swiper-slide" key=${track.id}>
+                          <${MediaCard}
+                            track=${track}
+                            onClick=${handleMediaClick}
+                          />
+                        </div>
+                      `
+                    )}
+                  </div>
+                </div>
+              `}
+            </div>
+          </div>
+        `
+      }
+
+      render(h(App), document.getElementById('app'))
+    </script>
+  </body>
+</html>
