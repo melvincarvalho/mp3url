@@ -219,7 +219,10 @@ async function main () {
 
         if (startTimeDirective) {
           // Add seconds to existing start time
-          let currentStartTime = parseFloat(startTimeDirective.value);
+          let currentStartTime = parseFloat(startTimeDirective.value || '0');
+          if (isNaN(currentStartTime)) {
+            currentStartTime = 0;
+          }
           startTimeDirective.value = (currentStartTime + secondsToAdd).toString();
         } else {
           // Create a new start-time directive
