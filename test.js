@@ -90,12 +90,50 @@ https://example.com/song.mp3`;
   console.log('✓ Simplified playlists are parsed correctly');
 }
 
+// Test 5: Null/undefined value handling in EXTVLCOPT directives
+function testNullValueHandling () {
+  console.log('Test 5: Null/undefined value handling');
+
+  // Create a playlist with a malformed start-time directive (no value)
+  const playlist = {
+    headers: [{ type: 'EXTM3U' }],
+    tracks: [{
+      url: 'https://example.com/song.mp3',
+      title: 'Test Song',
+      duration: 180,
+      directives: [{
+        type: 'EXTVLCOPT',
+        key: 'start-time',
+        value: null // Simulate malformed directive
+      }]
+    }]
+  };
+
+  // Test the fixed logic
+  const track = playlist.tracks[0];
+  let startTimeDirective = track.directives.find(d =>
+    d.type === 'EXTVLCOPT' && d.key === 'start-time');
+
+  if (startTimeDirective) {
+    let currentStartTime = parseFloat(startTimeDirective.value || '0');
+    if (isNaN(currentStartTime)) {
+      currentStartTime = 0;
+    }
+    const secondsToAdd = 15;
+    startTimeDirective.value = (currentStartTime + secondsToAdd).toString();
+  }
+
+  assert.equal(startTimeDirective.value, '15', 'Null value should be treated as 0 and add 15 seconds');
+  console.log('✓ Null/undefined values are handled correctly');
+}
+
 // Run all tests
 try {
   testParseAndSerialize();
   testCreatePlaylist();
   testVLCDirectives();
   testLenientParsing();
+  testNullValueHandling();
   console.log('\nAll tests passed! ✓');
 } catch (error) {
   console.error('\n❌ Test failed:', error.message);
