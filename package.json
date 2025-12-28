@@ -1,7 +1,7 @@
 {
   "name": "mp3url",
-  "version": "0.0.5",
-  "description": "m3u library for parsing and serializing M3U playlist files",
+  "version": "0.0.6",
+  "description": "M3U playlist parser and serializer - parse, create, and manipulate playlists",
   "type": "module",
   "main": "index.js",
   "bin": {
@@ -9,7 +9,9 @@
   },
   "scripts": {
     "test": "node test.js",
-    "example": "node example.js"
+    "start": "node quickstart.js",
+    "example": "node example.js",
+    "demo": "node quickstart.js"
   },
   "repository": {
     "type": "git",

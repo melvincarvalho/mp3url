@@ -1662,8 +1662,8 @@
 
             console.log('Found event:', event)
 
-            // Check if it's a playlist event (kind 30313 or contains M3U content)
-            if (event.kind !== 30313 && !event.content.includes('#EXTM3U')) {
+            // Check if it's a playlist event (kind 32100 or contains M3U content)
+            if (event.kind !== 32100 && !event.content.includes('#EXTM3U')) {
               throw new Error(
                 `Event does not contain M3U playlist data. Event kind: ${
                   event.kind

@@ -1,141 +1,408 @@
 #!/usr/bin/env node
 
 /**
- * Simple tests for mp3url library
+ * Comprehensive test suite for mp3url library
+ * Run: npm test
  */
 
 import { parse, serialize, createPlaylist, addTrack } from './index.js';
 import { strict as assert } from 'assert';
 
-console.log('Running tests for mp3url library...');
+let passed = 0;
+let failed = 0;
 
-// Test 1: Parse and serialize should be reciprocal
-function testParseAndSerialize () {
-  console.log('Test 1: Parse and serialize consistency');
+function test(name, fn) {
+  try {
+    fn();
+    console.log(`  ✓ ${name}`);
+    passed++;
+  } catch (error) {
+    console.log(`  ✗ ${name}`);
+    console.log(`    ${error.message}`);
+    failed++;
+  }
+}
 
-  const original = `#EXTM3U
+function suite(name, fn) {
+  console.log(`\n${name}`);
+  fn();
+}
+
+// ============================================================================
+// PARSE TESTS
+// ============================================================================
+
+suite('parse()', () => {
+  test('parses empty content', () => {
+    const result = parse('');
+    assert.deepEqual(result, { tracks: [], headers: [] });
+  });
+
+  test('parses EXTM3U header', () => {
+    const result = parse('#EXTM3U');
+    assert.equal(result.headers.length, 1);
+    assert.equal(result.headers[0].type, 'EXTM3U');
+  });
+
+  test('parses simple URL without metadata', () => {
+    const result = parse('https://example.com/song.mp3');
+    assert.equal(result.tracks.length, 1);
+    assert.equal(result.tracks[0].url, 'https://example.com/song.mp3');
+    assert.equal(result.tracks[0].title, '');
+    assert.equal(result.tracks[0].duration, -1);
+  });
+
+  test('parses EXTINF with duration and title', () => {
+    const content = `#EXTM3U
+#EXTINF:180,My Song
+https://example.com/song.mp3`;
+    const result = parse(content);
+    assert.equal(result.tracks[0].duration, 180);
+    assert.equal(result.tracks[0].title, 'My Song');
+  });
+
+  test('handles title with commas', () => {
+    const content = `#EXTINF:180,Artist - Song, Vol. 2
+https://example.com/song.mp3`;
+    const result = parse(content);
+    assert.equal(result.tracks[0].title, 'Artist - Song, Vol. 2');
+  });
+
+  test('handles negative/unknown duration', () => {
+    const content = `#EXTINF:-1,Unknown Duration
+https://example.com/song.mp3`;
+    const result = parse(content);
+    assert.equal(result.tracks[0].duration, -1);
+  });
+
+  test('handles invalid duration gracefully', () => {
+    const content = `#EXTINF:notanumber,Test
+https://example.com/song.mp3`;
+    const result = parse(content);
+    assert.equal(result.tracks[0].duration, -1);
+  });
+
+  test('parses EXTVLCOPT directives', () => {
+    const content = `#EXTINF:180,Test
+#EXTVLCOPT:start-time=30
+#EXTVLCOPT:stop-time=150
+https://example.com/song.mp3`;
+    const result = parse(content);
+    assert.equal(result.tracks[0].directives.length, 2);
+    assert.equal(result.tracks[0].directives[0].key, 'start-time');
+    assert.equal(result.tracks[0].directives[0].value, '30');
+  });
+
+  test('preserves custom directives as raw', () => {
+    const content = `#EXTM3U
+#PLAYLIST:My Playlist
+#EXTINF:180,Test
+https://example.com/song.mp3`;
+    const result = parse(content);
+    assert.equal(result.headers[1].raw, '#PLAYLIST:My Playlist');
+  });
+
+  test('handles Windows line endings (CRLF)', () => {
+    const content = '#EXTM3U\r\n#EXTINF:180,Test\r\nhttps://example.com/song.mp3';
+    const result = parse(content);
+    assert.equal(result.tracks.length, 1);
+    assert.equal(result.tracks[0].url, 'https://example.com/song.mp3');
+  });
+
+  test('skips empty lines', () => {
+    const content = `#EXTM3U
+
+#EXTINF:180,Test
+
+https://example.com/song.mp3
+
+`;
+    const result = parse(content);
+    assert.equal(result.tracks.length, 1);
+  });
+
+  test('parses multiple tracks', () => {
+    const content = `#EXTM3U
+#EXTINF:180,Song 1
+https://example.com/song1.mp3
+#EXTINF:240,Song 2
+https://example.com/song2.mp3
+#EXTINF:300,Song 3
+https://example.com/song3.mp3`;
+    const result = parse(content);
+    assert.equal(result.tracks.length, 3);
+    assert.equal(result.tracks[1].title, 'Song 2');
+    assert.equal(result.tracks[2].duration, 300);
+  });
+
+  test('lenient parsing: EXTVLCOPT without EXTINF', () => {
+    const content = `#EXTVLCOPT:start-time=15
+https://example.com/song.mp3`;
+    const result = parse(content);
+    assert.equal(result.tracks.length, 1);
+    assert.equal(result.tracks[0].directives[0].key, 'start-time');
+  });
+});
+
+// ============================================================================
+// SERIALIZE TESTS
+// ============================================================================
+
+suite('serialize()', () => {
+  test('serializes empty playlist with default header', () => {
+    const result = serialize({ tracks: [], headers: [] });
+    assert.equal(result, '#EXTM3U');
+  });
+
+  test('serializes playlist with EXTM3U header', () => {
+    const playlist = { headers: [{ type: 'EXTM3U' }], tracks: [] };
+    const result = serialize(playlist);
+    assert.equal(result, '#EXTM3U');
+  });
+
+  test('serializes track with all metadata', () => {
+    const playlist = {
+      headers: [{ type: 'EXTM3U' }],
+      tracks: [{
+        url: 'https://example.com/song.mp3',
+        title: 'My Song',
+        duration: 180,
+        directives: []
+      }]
+    };
+    const result = serialize(playlist);
+    assert.ok(result.includes('#EXTINF:180,My Song'));
+    assert.ok(result.includes('https://example.com/song.mp3'));
+  });
+
+  test('serializes EXTVLCOPT directives', () => {
+    const playlist = {
+      headers: [{ type: 'EXTM3U' }],
+      tracks: [{
+        url: 'https://example.com/song.mp3',
+        title: 'Test',
+        duration: 180,
+        directives: [{ type: 'EXTVLCOPT', key: 'start-time', value: '30' }]
+      }]
+    };
+    const result = serialize(playlist);
+    assert.ok(result.includes('#EXTVLCOPT:start-time=30'));
+  });
+
+  test('preserves raw directives', () => {
+    const playlist = {
+      headers: [{ type: 'EXTM3U' }, { raw: '#PLAYLIST:Test' }],
+      tracks: []
+    };
+    const result = serialize(playlist);
+    assert.ok(result.includes('#PLAYLIST:Test'));
+  });
+
+  test('handles tracks without title/duration', () => {
+    const playlist = {
+      headers: [],
+      tracks: [{ url: 'https://example.com/song.mp3', title: '', duration: -1, directives: [] }]
+    };
+    const result = serialize(playlist);
+    assert.ok(result.includes('https://example.com/song.mp3'));
+    assert.ok(!result.includes('#EXTINF'));
+  });
+});
+
+// ============================================================================
+// ROUND-TRIP TESTS
+// ============================================================================
+
+suite('parse() + serialize() round-trip', () => {
+  test('round-trip preserves simple playlist', () => {
+    const original = `#EXTM3U
+#EXTINF:180,Test Song
+https://example.com/song.mp3`;
+    const result = serialize(parse(original));
+    assert.equal(result.trim(), original.trim());
+  });
+
+  test('round-trip preserves VLC options', () => {
+    const original = `#EXTM3U
 #EXTINF:180,Test Song
 #EXTVLCOPT:start-time=15
 https://example.com/song.mp3`;
+    const result = serialize(parse(original));
+    assert.equal(result.trim(), original.trim());
+  });
 
-  const parsed = parse(original);
-  const serialized = serialize(parsed);
+  test('round-trip preserves multiple tracks', () => {
+    const original = `#EXTM3U
+#EXTINF:180,Song 1
+https://example.com/song1.mp3
+#EXTINF:240,Song 2
+https://example.com/song2.mp3`;
+    const parsed = parse(original);
+    const serialized = serialize(parsed);
+    const reparsed = parse(serialized);
+    assert.equal(reparsed.tracks.length, 2);
+    assert.equal(reparsed.tracks[0].title, 'Song 1');
+    assert.equal(reparsed.tracks[1].title, 'Song 2');
+  });
+});
 
-  // Normalize line endings for comparison
-  const normalizedOriginal = original.replace(/\r\n/g, '\n');
-  const normalizedSerialized = serialized.replace(/\r\n/g, '\n');
+// ============================================================================
+// createPlaylist() TESTS
+// ============================================================================
 
-  assert.equal(normalizedSerialized, normalizedOriginal, 'Serialized content should match original');
-  console.log('✓ Parse and serialize work reciprocally');
-}
+suite('createPlaylist()', () => {
+  test('creates playlist with EXTM3U header', () => {
+    const playlist = createPlaylist();
+    assert.equal(playlist.headers.length, 1);
+    assert.equal(playlist.headers[0].type, 'EXTM3U');
+  });
 
-// Test 2: Create playlist and add tracks
-function testCreatePlaylist () {
-  console.log('Test 2: Creating playlists');
+  test('creates playlist with empty tracks array', () => {
+    const playlist = createPlaylist();
+    assert.deepEqual(playlist.tracks, []);
+  });
 
-  const playlist = createPlaylist();
-  assert.equal(playlist.headers.length, 1, 'Playlist should have a default header');
-  assert.equal(playlist.tracks.length, 0, 'Playlist should start with no tracks');
+  test('creates independent instances', () => {
+    const playlist1 = createPlaylist();
+    const playlist2 = createPlaylist();
+    playlist1.tracks.push({ url: 'test' });
+    assert.equal(playlist2.tracks.length, 0);
+  });
+});
 
-  addTrack(playlist, 'https://example.com/song.mp3', 'Test Song', 180);
-  assert.equal(playlist.tracks.length, 1, 'Playlist should have 1 track after adding');
-  assert.equal(playlist.tracks[0].url, 'https://example.com/song.mp3', 'Track URL should match');
-  assert.equal(playlist.tracks[0].title, 'Test Song', 'Track title should match');
-  assert.equal(playlist.tracks[0].duration, 180, 'Track duration should match');
+// ============================================================================
+// addTrack() TESTS
+// ============================================================================
 
-  console.log('✓ Creating playlists and adding tracks works');
-}
+suite('addTrack()', () => {
+  test('adds track with all parameters', () => {
+    const playlist = createPlaylist();
+    addTrack(playlist, 'https://example.com/song.mp3', 'My Song', 180, []);
+    assert.equal(playlist.tracks.length, 1);
+    assert.equal(playlist.tracks[0].url, 'https://example.com/song.mp3');
+    assert.equal(playlist.tracks[0].title, 'My Song');
+    assert.equal(playlist.tracks[0].duration, 180);
+  });
 
-// Test 3: Parse EXTVLCOPT directives
-function testVLCDirectives () {
-  console.log('Test 3: Parsing VLC directives');
+  test('uses default values for optional parameters', () => {
+    const playlist = createPlaylist();
+    addTrack(playlist, 'https://example.com/song.mp3');
+    assert.equal(playlist.tracks[0].title, '');
+    assert.equal(playlist.tracks[0].duration, -1);
+    assert.deepEqual(playlist.tracks[0].directives, []);
+  });
 
-  const content = `#EXTM3U
-#EXTINF:180,VLC Test
-#EXTVLCOPT:start-time=15
-#EXTVLCOPT:stop-time=175
+  test('adds multiple tracks', () => {
+    const playlist = createPlaylist();
+    addTrack(playlist, 'https://example.com/song1.mp3', 'Song 1');
+    addTrack(playlist, 'https://example.com/song2.mp3', 'Song 2');
+    addTrack(playlist, 'https://example.com/song3.mp3', 'Song 3');
+    assert.equal(playlist.tracks.length, 3);
+  });
+
+  test('returns the modified playlist', () => {
+    const playlist = createPlaylist();
+    const result = addTrack(playlist, 'https://example.com/song.mp3');
+    assert.strictEqual(result, playlist);
+  });
+
+  test('adds track with directives', () => {
+    const playlist = createPlaylist();
+    const directives = [{ type: 'EXTVLCOPT', key: 'start-time', value: '30' }];
+    addTrack(playlist, 'https://example.com/song.mp3', 'Test', 180, directives);
+    assert.equal(playlist.tracks[0].directives.length, 1);
+    assert.equal(playlist.tracks[0].directives[0].key, 'start-time');
+  });
+});
+
+// ============================================================================
+// EDGE CASES
+// ============================================================================
+
+suite('Edge cases', () => {
+  test('handles playlist with only URLs', () => {
+    const content = `https://example.com/song1.mp3
+https://example.com/song2.mp3`;
+    const result = parse(content);
+    assert.equal(result.tracks.length, 2);
+  });
+
+  test('handles float durations', () => {
+    const content = `#EXTINF:180.5,Float Duration
 https://example.com/song.mp3`;
+    const result = parse(content);
+    assert.equal(result.tracks[0].duration, 180.5);
+  });
 
-  const playlist = parse(content);
-  const track = playlist.tracks[0];
+  test('handles special characters in URL', () => {
+    const url = 'https://example.com/path?query=value&foo=bar#anchor';
+    const playlist = createPlaylist();
+    addTrack(playlist, url);
+    const serialized = serialize(playlist);
+    const reparsed = parse(serialized);
+    assert.equal(reparsed.tracks[0].url, url);
+  });
 
-  assert.equal(track.directives.length, 2, 'Track should have 2 directives');
-  assert.equal(track.directives[0].type, 'EXTVLCOPT', 'Directive should be of type EXTVLCOPT');
-  assert.equal(track.directives[0].key, 'start-time', 'First directive key should be start-time');
-  assert.equal(track.directives[0].value, '15', 'First directive value should be 15');
-  assert.equal(track.directives[1].key, 'stop-time', 'Second directive key should be stop-time');
-  assert.equal(track.directives[1].value, '175', 'Second directive value should be 175');
-
-  console.log('✓ VLC directives are parsed correctly');
-}
-
-// Test 4: Lenient parsing of simplified playlists
-function testLenientParsing () {
-  console.log('Test 4: Lenient parsing of simplified playlists');
-
-  const content = `#EXTVLCOPT:start-time=15
+  test('handles unicode in title', () => {
+    const content = `#EXTINF:180,日本語タイトル 🎵
 https://example.com/song.mp3`;
+    const result = parse(content);
+    assert.equal(result.tracks[0].title, '日本語タイトル 🎵');
+  });
 
-  const playlist = parse(content);
-
-  assert.equal(playlist.tracks.length, 1, 'Playlist should have 1 track');
-  const track = playlist.tracks[0];
-
-  assert.equal(track.url, 'https://example.com/song.mp3', 'Track URL should match');
-  assert.equal(track.directives.length, 1, 'Track should have 1 directive');
-  assert.equal(track.directives[0].type, 'EXTVLCOPT', 'Directive should be of type EXTVLCOPT');
-  assert.equal(track.directives[0].key, 'start-time', 'Directive key should be start-time');
-  assert.equal(track.directives[0].value, '15', 'Directive value should be 15');
-
-  console.log('✓ Simplified playlists are parsed correctly');
-}
-
-// Test 5: Null/undefined value handling in EXTVLCOPT directives
-function testNullValueHandling () {
-  console.log('Test 5: Null/undefined value handling');
-
-  // Create a playlist with a malformed start-time directive (no value)
-  const playlist = {
-    headers: [{ type: 'EXTM3U' }],
-    tracks: [{
-      url: 'https://example.com/song.mp3',
-      title: 'Test Song',
-      duration: 180,
-      directives: [{
-        type: 'EXTVLCOPT',
-        key: 'start-time',
-        value: null // Simulate malformed directive
-      }]
-    }]
-  };
-
-  // Test the fixed logic
-  const track = playlist.tracks[0];
-  let startTimeDirective = track.directives.find(d =>
-    d.type === 'EXTVLCOPT' && d.key === 'start-time');
-
-  if (startTimeDirective) {
-    let currentStartTime = parseFloat(startTimeDirective.value || '0');
-    if (isNaN(currentStartTime)) {
-      currentStartTime = 0;
+  test('handles very long playlists', () => {
+    const playlist = createPlaylist();
+    for (let i = 0; i < 1000; i++) {
+      addTrack(playlist, `https://example.com/song${i}.mp3`, `Song ${i}`, i);
     }
-    const secondsToAdd = 15;
-    startTimeDirective.value = (currentStartTime + secondsToAdd).toString();
-  }
+    const serialized = serialize(playlist);
+    const reparsed = parse(serialized);
+    assert.equal(reparsed.tracks.length, 1000);
+  });
 
-  assert.equal(startTimeDirective.value, '15', 'Null value should be treated as 0 and add 15 seconds');
-  console.log('✓ Null/undefined values are handled correctly');
-}
+  test('handles null/undefined values in EXTVLCOPT directives', () => {
+    // Test the fixed logic for malformed directives with null values
+    const playlist = {
+      headers: [{ type: 'EXTM3U' }],
+      tracks: [{
+        url: 'https://example.com/song.mp3',
+        title: 'Test Song',
+        duration: 180,
+        directives: [{
+          type: 'EXTVLCOPT',
+          key: 'start-time',
+          value: null // Simulate malformed directive
+        }]
+      }]
+    };
 
-// Run all tests
-try {
-  testParseAndSerialize();
-  testCreatePlaylist();
-  testVLCDirectives();
-  testLenientParsing();
-  testNullValueHandling();
-  console.log('\nAll tests passed! ✓');
-} catch (error) {
-  console.error('\n❌ Test failed:', error.message);
+    const track = playlist.tracks[0];
+    let startTimeDirective = track.directives.find(d =>
+      d.type === 'EXTVLCOPT' && d.key === 'start-time');
+
+    if (startTimeDirective) {
+      let currentStartTime = parseFloat(startTimeDirective.value || '0');
+      if (isNaN(currentStartTime)) {
+        currentStartTime = 0;
+      }
+      const secondsToAdd = 15;
+      startTimeDirective.value = (currentStartTime + secondsToAdd).toString();
+    }
+
+    assert.equal(startTimeDirective.value, '15');
+  });
+});
+
+// ============================================================================
+// RESULTS
+// ============================================================================
+
+console.log('\n' + '='.repeat(50));
+console.log(`Tests: ${passed} passed, ${failed} failed`);
+console.log('='.repeat(50));
+
+if (failed > 0) {
   process.exit(1);
-} 
+} else {
+  console.log('\n✨ All tests passed!\n');
+}
